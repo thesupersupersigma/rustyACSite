@@ -34,7 +34,7 @@ const CSS = /* css */ `
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: rgb(14 14 14 / 0.62);
+  background: rgb(14 14 14 / 0.7);
   color: inherit;
   font: 600 0.8125rem/1.15 var(--font-body, system-ui, sans-serif);
   letter-spacing: 0.06em;
@@ -46,10 +46,9 @@ const CSS = /* css */ `
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
-  backdrop-filter: blur(6px);
   transition: transform 0.12s var(--ease, ease), background-color 0.2s linear;
 }
-.rev__btn:hover { background: rgb(14 14 14 / 0.78); }
+.rev__btn:hover { background: rgb(14 14 14 / 0.84); }
 .rev__btn.is-held { transform: scale(0.95); background: rgb(30 14 6 / 0.82); }
 .rev__btn[aria-disabled='true'] { cursor: default; opacity: 0.55; }
 .rev__ring {

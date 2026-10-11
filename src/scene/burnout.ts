@@ -10,18 +10,32 @@ import {
   Color,
   Matrix4,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
+  PlaneGeometry,
+  PointLight,
   Quaternion,
   SRGBColorSpace,
   Vector3,
   type Object3D,
+  type PerspectiveCamera,
   type Scene,
 } from 'three';
 import { Controls } from './controls';
+import { Debris } from './debris';
 import { Emitter } from './events';
 import type { CameraRig } from './rig';
+import { SMOKE, Smoke, makeRandom } from './smoke';
 import { BurnoutSim, type SimEvent, type SimSnapshot } from './sim';
-import { WHEEL_IDS, type CarNodes, type EngineReadout, type SimHooks, type Tier, type WheelId } from './types';
+import {
+  WHEEL_IDS,
+  type BenchResult,
+  type CarNodes,
+  type EngineReadout,
+  type SimHooks,
+  type Tier,
+  type WheelId,
+} from './types';
 
 /** How the burnout looks. The engine numbers (revs, heat, timings) are in TUNING in sim.ts. */
 export const LOOK = {
@@ -56,6 +70,24 @@ export const LOOK = {
   LED_GLOW: 4,
   /** How bright a lit start-light pod is (above 1 so the bloom picks it up). */
   LIGHT_GLOW: 5,
+  /** Strength of the light the five lit pods throw onto the car (the gantry is behind the hero camera). */
+  GANTRY_GLOW: 120,
+
+  /** How far the rear wheels' textures smear into one colour at full speed (lettering and decals stop strobing). */
+  SMEAR: 0.85,
+
+  // ---- heat and rubber ---------------------------------------------------------------------------
+  /** Colour and strength of the glow on a tyre about to pop (strength above 1 feeds the bloom). */
+  HEAT_COLOR: 0xd2581f,
+  HEAT_GLOW: 2.2,
+  /** Heat (0 to 1) below which the tread shows no glow at all. */
+  HEAT_VISIBLE: 0.3,
+  /** Seconds of hard wheelspin until the rubber patches are as dark as they get, and how dark that is. */
+  RUBBER_SECONDS: 10,
+  RUBBER_MAX: 0.82,
+  /** Metres: size of one rubber patch (across, along the car). */
+  RUBBER_WIDTH: 0.5,
+  RUBBER_LENGTH: 1.7,
 
   // ---- the pop -----------------------------------------------------------------------------------
   /** Metres the rear of the car drops when the tyres go flat. */
@@ -90,6 +122,13 @@ export interface BurnoutContext {
   groundLayer: Object3D[];
   getTier(): Tier;
   getReducedMotion(): boolean;
+  camera: PerspectiveCamera;
+  fogColor: Color;
+  fogDensity: number;
+  /** World position of the floodlight aimed at the car (the smoke is shaded from there). */
+  keyLight: Vector3;
+  /** Draws `frames` frames back to back, waiting for the GPU each time; returns the average in ms. */
+  measureDraw(frames: number): number;
 }
 
 const FIXED_STEP = 1 / 60;
@@ -158,6 +197,36 @@ function averageColor(material: MeshStandardMaterial, out: Color): Color {
   return out.multiply(material.color);
 }
 
+/** A strip of laid rubber: darkest under the tyre, feathering out backwards and at the sides. */
+function makeRubberTexture(): CanvasTexture {
+  const w = 64;
+  const h = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    const along = ctx.createLinearGradient(0, 0, 0, h);
+    // the bottom of the canvas ends up at the front of the strip, under the tyre
+    along.addColorStop(0, 'rgba(255,255,255,0)');
+    along.addColorStop(0.3, 'rgba(255,255,255,0.3)');
+    along.addColorStop(0.7, 'rgba(255,255,255,0.8)');
+    along.addColorStop(0.93, 'rgba(255,255,255,1)');
+    along.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = along;
+    ctx.fillRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'destination-in';
+    const across = ctx.createLinearGradient(0, 0, w, 0);
+    across.addColorStop(0, 'rgba(0,0,0,0)');
+    across.addColorStop(0.22, 'rgba(0,0,0,1)');
+    across.addColorStop(0.78, 'rgba(0,0,0,1)');
+    across.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = across;
+    ctx.fillRect(0, 0, w, h);
+  }
+  return new CanvasTexture(canvas);
+}
+
 /** What a spinning rim smears into: soft concentric bands, see-through between the spokes' average. */
 function makeBlurTexture(): CanvasTexture {
   const size = 128;
@@ -219,6 +288,23 @@ export class Burnout {
   private readonly wheelMaterials: MeshStandardMaterial[] = [];
   /** Rear rim, rim decal and nut materials: these fade a little under the blur disc. */
   private readonly rearSpin = new Set<MeshStandardMaterial>();
+  /** The two rear tyre materials (one each): their emissive is the heat glow. */
+  private readonly hotTyres: MeshStandardMaterial[] = [];
+  /** Shared by every rear wheel material: how far its texture has smeared into its average colour. */
+  private readonly smear = { value: 0 };
+  private readonly rearZ: number;
+  private readonly halfTrack: number;
+  private readonly rearHubY: number;
+
+  // ---- smoke, rubber on the track, shards ---------------------------------------------------------------
+  private readonly smoke: Smoke;
+  private readonly debris = new Debris();
+  private readonly random = makeRandom(31);
+  private readonly rubberMeshes: Mesh[] = [];
+  private readonly rubberMaterial: MeshBasicMaterial;
+  private readonly rubberTexture: CanvasTexture;
+  private rubber = 0;
+  private smokeReflected = true;
   private readonly rearTyres: Mesh[] = [];
   private readonly rearTyrePos: Vector3[] = [];
   private readonly rearTyreScale: Vector3[] = [];
@@ -233,6 +319,8 @@ export class Burnout {
   private readonly lightRed = new Color(1, 0.06, 0.03).multiplyScalar(LOOK.LIGHT_GLOW);
   private readonly lightGreen = new Color(0.08, 1, 0.22).multiplyScalar(LOOK.LIGHT_GLOW * 0.8);
   private lightsShown = 0;
+  private readonly gantryGlow: PointLight;
+  private readonly scratch = new Vector3();
 
   private readonly mA = new Matrix4();
   private readonly mB = new Matrix4();
@@ -246,7 +334,44 @@ export class Burnout {
     const { car } = ctx;
 
     this.frontZ = car.hubs.FL.position.z;
-    this.wheelbase = Math.max(0.5, this.frontZ - car.hubs.RL.position.z);
+    this.rearZ = car.hubs.RL.position.z;
+    this.rearHubY = car.hubs.RL.position.y;
+    this.halfTrack = (Math.abs(car.hubs.RL.position.x) + Math.abs(car.hubs.RR.position.x)) / 2;
+    this.wheelbase = Math.max(0.5, this.frontZ - this.rearZ);
+
+    // ---- smoke and shards ---------------------------------------------------------------------------------
+    this.smoke = new Smoke({ fogColor: ctx.fogColor, fogDensity: ctx.fogDensity, keyLight: ctx.keyLight });
+    this.smoke.setCap(SMOKE.CAP[ctx.getTier()]);
+    ctx.scene.add(this.smoke.mesh, this.debris.mesh);
+    this.setSmokeReflected(SMOKE.IN_REFLECTION);
+
+    // ---- rubber laid on the tarmac under and behind each rear tyre. On the ground layer, so the mirror
+    // image never shows it (a decal has no business in its own reflection).
+    this.rubberTexture = makeRubberTexture();
+    this.rubberMaterial = new MeshBasicMaterial({
+      map: this.rubberTexture,
+      color: 0x000000,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      fog: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -3,
+      polygonOffsetUnits: -3,
+    });
+    const rubberGeometry = new PlaneGeometry(LOOK.RUBBER_WIDTH, LOOK.RUBBER_LENGTH);
+    for (const side of [1, -1]) {
+      const patch = new Mesh(rubberGeometry, this.rubberMaterial);
+      patch.name = side > 0 ? 'rubber_RL' : 'rubber_RR';
+      patch.rotation.x = -Math.PI / 2;
+      // the strip starts just ahead of the contact patch and runs back from it
+      patch.position.set(side * this.halfTrack, 0.01, this.rearZ + 0.22 - LOOK.RUBBER_LENGTH / 2);
+      patch.renderOrder = 1;
+      patch.visible = false;
+      ctx.scene.add(patch);
+      ctx.groundLayer.push(patch);
+      this.rubberMeshes.push(patch);
+    }
 
     // ---- wheels: every wheel part gets a clone of its material, so fading the wheels during the stop
     // (and the rear rims under the blur disc) never touches the body or the front tyres
@@ -263,25 +388,11 @@ export class Burnout {
         const key = `${o.material.uuid}:${tyre && rear ? id : rear ? 'R' : 'F'}`;
         let clone = clones.get(key);
         if (!clone) {
-          const cutout = o.material.transparent || o.material.alphaTest > 0;
-          clone = o.material.clone();
-          // always "transparent" so fading needs no shader rebuild; at opacity 1 it draws like before
-          clone.transparent = true;
-          // the model's materials are double-sided; without this each wheel part would be drawn twice
-          clone.forceSinglePass = true;
-          // these textures keep other data in their alpha channel, so an opaque part must not start reading it
-          if (!cutout) {
-            clone.onBeforeCompile = (shader) => {
-              shader.fragmentShader = shader.fragmentShader.replace(
-                '#include <alphamap_fragment>',
-                '#include <alphamap_fragment>\ndiffuseColor.a = opacity;',
-              );
-            };
-            clone.customProgramCacheKey = () => 'wheel-fade';
-          }
+          clone = this.wheelMaterial(o.material, rear ? (tyre ? 'tyre' : 'rear') : 'front');
           clones.set(key, clone);
           ctx.carMaterials.push(clone);
           this.wheelMaterials.push(clone);
+          if (tyre && rear) this.hotTyres.push(clone);
         }
         if (rear && /^(rim|rimdecal|nut)_/.test(o.name)) this.rearSpin.add(clone);
         o.material = clone;
@@ -291,8 +402,7 @@ export class Burnout {
     // ---- rear tyres: squashed by hand when flat, so they keep their own matrix --------------------------
     const tyreSize = measure(meshNamed(car.wheels.RL, 'tyre_'), 0.33, 0.19);
     const rimSize = measure(meshNamed(car.wheels.RL, 'rim_'), 0.184, 0.18);
-    const rearHubY = car.hubs.RL.position.y;
-    this.flatHeight = Math.min(1, Math.max(0.3, (rearHubY - LOOK.POP_DROP) / tyreSize.radius));
+    this.flatHeight = Math.min(1, Math.max(0.3, (this.rearHubY - LOOK.POP_DROP) / tyreSize.radius));
     for (const id of ['RL', 'RR'] as const) {
       const tyre = meshNamed(car.wheels[id], 'tyre_');
       if (!tyre) continue;
@@ -326,6 +436,15 @@ export class Burnout {
       car.hubs[id].add(disc);
       this.blurDiscs.push(disc);
     }
+
+    // ---- the start lights' glow on the car: one point light at the gantry, dark until a pod is lit -----------
+    this.gantryGlow = new PointLight(0xff0000, 0, 60, 2);
+    for (const pod of ctx.startLights) {
+      pod.updateWorldMatrix(true, false);
+      pod.getWorldPosition(this.scratch);
+      this.gantryGlow.position.addScaledVector(this.scratch, 1 / ctx.startLights.length);
+    }
+    ctx.scene.add(this.gantryGlow);
 
     // ---- the rev LEDs on the steering wheel -------------------------------------------------------------
     this.led = ctx.carMaterials.find((m) => m.name.startsWith('LED_Light'));
@@ -396,6 +515,7 @@ export class Burnout {
       },
       view: (azimuthDeg, height) => ctx.rig.setView({ azimuth: (azimuthDeg * Math.PI) / 180, height }),
       snapshot: () => this.sim.out,
+      bench: (frames = 30) => this.bench(frames),
     };
 
     this.apply();
@@ -412,7 +532,13 @@ export class Burnout {
   /** Shows the parts that are normally hidden, so the first frame can compile their shaders. */
   setWarm(on: boolean): void {
     this.warm = on;
+    this.smoke.warm(on);
     this.apply();
+  }
+
+  /** Particles alive right now. */
+  get smokeAlive(): number {
+    return this.smoke.alive;
   }
 
   /** Lines for the `?debug=1` overlay. */
@@ -422,7 +548,8 @@ export class Burnout {
       `state  ${s.state}${this.manual ? ' (manual clock)' : ''}\n` +
       `rpm    ${s.rpm.toFixed(0)}${s.limiter ? ' LIM' : ''}\n` +
       `thr    ${s.throttle}\n` +
-      `heat   ${s.heat.toFixed(2)}`
+      `heat   ${s.heat.toFixed(2)}\n` +
+      `smoke  ${this.smoke.alive} / ${SMOKE.CAP[this.ctx.getTier()]}`
     );
   }
 
@@ -434,6 +561,68 @@ export class Burnout {
     this.blurDiscs[0]?.geometry.dispose();
     this.blurMaterial.dispose();
     this.blurTexture.dispose();
+    this.gantryGlow.removeFromParent();
+    this.gantryGlow.dispose();
+    this.smoke.mesh.removeFromParent();
+    this.smoke.dispose();
+    this.debris.mesh.removeFromParent();
+    this.debris.dispose();
+    for (const patch of this.rubberMeshes) patch.removeFromParent();
+    this.rubberMeshes[0]?.geometry.dispose();
+    this.rubberMaterial.dispose();
+    this.rubberTexture.dispose();
+  }
+
+  /**
+   * A wheel part's own copy of its material. All of them can fade (the pit stop); the rear ones also
+   * smear toward their average colour as they spin, so lettering and decals do not strobe; the rear
+   * tyres add the heat glow, on the tread only.
+   */
+  private wheelMaterial(source: MeshStandardMaterial, kind: 'front' | 'rear' | 'tyre'): MeshStandardMaterial {
+    const cutout = source.transparent || source.alphaTest > 0;
+    const clone = source.clone();
+    // always "transparent" so fading needs no shader rebuild; at opacity 1 it draws like before
+    clone.transparent = true;
+    // the model's materials are double-sided; without this each wheel part would be drawn twice
+    clone.forceSinglePass = true;
+    const smearColor = kind === 'front' ? undefined : { value: averageColor(source, new Color()) };
+    if (kind === 'tyre') clone.emissive.setHex(LOOK.HEAT_COLOR);
+    clone.onBeforeCompile = (shader) => {
+      let fragment = shader.fragmentShader;
+      // these textures keep other data in their alpha channel, so an opaque part must not start reading it
+      if (!cutout) {
+        fragment = fragment.replace('#include <alphamap_fragment>', '#include <alphamap_fragment>\ndiffuseColor.a = opacity;');
+      }
+      if (smearColor) {
+        shader.uniforms['uSmear'] = this.smear;
+        shader.uniforms['uSmearColor'] = smearColor;
+        fragment = fragment
+          .replace('#include <common>', 'uniform float uSmear;\nuniform vec3 uSmearColor;\n#include <common>')
+          .replace(
+            '#include <map_fragment>',
+            '#include <map_fragment>\ndiffuseColor.rgb = mix( diffuseColor.rgb, uSmearColor, uSmear );',
+          );
+      }
+      if (kind === 'tyre') {
+        // the quantised tyre mesh has its tread at radius 1 around the axle (local x)
+        shader.vertexShader = shader.vertexShader
+          .replace('#include <common>', 'varying float vTread;\n#include <common>')
+          .replace(
+            '#include <begin_vertex>',
+            // tread = far from the axle and facing away from it (the sidewalls face along x)
+            '#include <begin_vertex>\nvTread = smoothstep( 0.8, 0.95, length( position.yz ) ) * ( 1.0 - smoothstep( 0.35, 0.75, abs( normal.x ) ) );',
+          );
+        fragment = fragment
+          .replace('#include <common>', 'varying float vTread;\n#include <common>')
+          .replace(
+            '#include <emissivemap_fragment>',
+            '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= vTread;',
+          );
+      }
+      shader.fragmentShader = fragment;
+    };
+    clone.customProgramCacheKey = () => `wheel-${kind}-${cutout ? 'cutout' : 'solid'}`;
+    return clone;
   }
 
   /** Runs the simulation for `seconds` in fixed steps (the test hooks). Zero still handles requests. */
@@ -459,6 +648,56 @@ export class Burnout {
     this.throttle += (s.throttle - this.throttle) * (1 - Math.exp(-dt / 0.1));
     this.landTime += dt;
     if (!s.pit.active && this.timerLeft > 0) this.timerLeft -= dt;
+
+    this.smoke.step(dt, s.smokeRate, clamp01(s.wheelNorm), this.rearZ, this.halfTrack);
+    this.debris.step(dt);
+    this.rubber = Math.min(1, this.rubber + (s.smokeRate * dt) / LOOK.RUBBER_SECONDS);
+  }
+
+  /**
+   * Times the burnout as it is right now (the test hook). The simulation is not moved on: the steps
+   * use a vanishing dt, which still walks every particle.
+   */
+  private bench(frames: number): BenchResult {
+    const n = Math.max(1, Math.floor(frames));
+    const { measureDraw } = this.ctx;
+    const start = performance.now();
+    for (let i = 0; i < n; i++) {
+      this.advance(1e-7, this.manualHeld);
+      this.apply();
+    }
+    const updateMs = (performance.now() - start) / n;
+
+    const mesh = this.smoke.mesh;
+    const reflected = this.smokeReflected;
+    const shown = mesh.visible;
+    measureDraw(3); // settle
+    const drawMs = measureDraw(n);
+    this.setSmokeReflected(!reflected);
+    const otherMs = measureDraw(n);
+    this.setSmokeReflected(reflected);
+    mesh.visible = false;
+    const drawWithoutSmokeMs = measureDraw(n);
+    mesh.visible = shown;
+    return {
+      tier: this.ctx.getTier(),
+      frames: n,
+      particles: this.smoke.alive,
+      updateMs,
+      drawMs,
+      drawWithoutSmokeMs,
+      drawSmokeMirroredMs: reflected ? drawMs : otherMs,
+      drawSmokeNotMirroredMs: reflected ? otherMs : drawMs,
+    };
+  }
+
+  /** Puts the smoke in the wet ground's mirror image, or keeps it out (the ground layer is hidden there). */
+  private setSmokeReflected(on: boolean): void {
+    this.smokeReflected = on;
+    const layer = this.ctx.groundLayer;
+    const at = layer.indexOf(this.smoke.mesh);
+    if (on && at >= 0) layer.splice(at, 1);
+    else if (!on && at < 0) layer.push(this.smoke.mesh);
   }
 
   private react(event: SimEvent): void {
@@ -470,9 +709,15 @@ export class Burnout {
       case 'pop':
         controls.setMode('pit');
         controls.announce('Tyres popped');
+        this.smoke.burst(this.rearZ, this.halfTrack);
+        this.debris.burst(this.rearZ, this.halfTrack, this.rearHubY, this.random);
         break;
       case 'pitstop:start':
         controls.setMode('busy');
+        break;
+      case 'wheel:off':
+        // the old wheels go, and the shards with them
+        this.debris.clear();
         break;
       case 'pitstop:end':
         controls.setMode('rev');
@@ -500,6 +745,20 @@ export class Burnout {
     const blur = this.warm ? 1 : smoothstep(LOOK.BLUR_START, LOOK.BLUR_FULL, s.wheelSpeed);
     this.blurMaterial.opacity = blur * LOOK.BLUR_OPACITY;
     for (const disc of this.blurDiscs) disc.visible = blur > 0.01;
+    this.smear.value = blur * LOOK.SMEAR;
+
+    // ---- heat: a rust glow on the tread that dies quickly once the tyre has let go ----------------------
+    const hot = smoothstep(LOOK.HEAT_VISIBLE, 1, s.heat);
+    const glow = hot * hot * (s.flat ? Math.max(0, 1 - s.popTime / 0.7) : 1);
+    for (const m of this.hotTyres) m.emissiveIntensity = LOOK.HEAT_GLOW * glow;
+
+    // ---- smoke, shards, rubber ---------------------------------------------------------------------------
+    this.smoke.setCap(SMOKE.CAP[this.ctx.getTier()]);
+    this.smoke.write(this.ctx.camera.position);
+    this.debris.write();
+    const rubber = this.warm ? 0.01 : this.rubber * LOOK.RUBBER_MAX;
+    this.rubberMaterial.opacity = rubber;
+    for (const patch of this.rubberMeshes) patch.visible = rubber > 0.004;
 
     // ---- the pit stop's wheels and nuts ----------------------------------------------------------------
     let fade = 1;
@@ -624,6 +883,8 @@ export class Burnout {
     if (shown !== this.lightsShown) {
       this.lightsShown = shown;
       const pods = this.ctx.startLights;
+      this.gantryGlow.color.copy(shown < 0 ? this.lightGreen : this.lightRed).multiplyScalar(1 / LOOK.LIGHT_GLOW);
+      this.gantryGlow.intensity = (LOOK.GANTRY_GLOW * (shown < 0 ? pods.length : shown)) / Math.max(1, pods.length);
       for (let i = 0; i < pods.length; i++) {
         const material = pods[i]?.material;
         if (!material || Array.isArray(material) || !('color' in material)) continue;

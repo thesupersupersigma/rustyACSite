@@ -409,6 +409,7 @@ async function buildScene(
 
   // ---- the burnout -------------------------------------------------------------------------------
   let reducedMotion = options.reducedMotion;
+  const benchPixel = new Uint8Array(4);
   const burnout = new Burnout({
     scene,
     car: carNodes,
@@ -419,6 +420,21 @@ async function buildScene(
     groundLayer: mirrorHidden,
     getTier: () => quality.tier,
     getReducedMotion: () => reducedMotion,
+    camera,
+    fogColor: new Color(NIGHT),
+    fogDensity: FOG_DENSITY,
+    keyLight: key.position,
+    measureDraw: (frames) => {
+      // reading one pixel back is what really waits for the GPU (finish() alone returns early on ANGLE)
+      const gl = renderer.getContext();
+      const start = performance.now();
+      for (let i = 0; i < frames; i++) {
+        draw();
+        gl.finish();
+        gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, benchPixel);
+      }
+      return (performance.now() - start) / frames;
+    },
   });
   teardown.push(() => burnout.dispose());
 

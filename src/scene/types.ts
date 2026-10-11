@@ -85,6 +85,25 @@ export interface SimHooks {
   view(azimuthDeg: number, height: number): void;
   /** The simulation's current state (the same object every time). */
   snapshot(): SimSnapshot;
+  /** Measures the current frame cost over `frames` frames (default 30). Blocks while it runs. */
+  bench(frames?: number): BenchResult;
+}
+
+/** Average milliseconds per frame, measured with the GPU finished after every draw. */
+export interface BenchResult {
+  tier: Tier;
+  frames: number;
+  /** Smoke particles alive during the measurement. */
+  particles: number;
+  /** JavaScript: one simulation step plus writing it onto the scene. */
+  updateMs: number;
+  /** Drawing the whole frame as it is. */
+  drawMs: number;
+  /** The same frame with the smoke hidden. */
+  drawWithoutSmokeMs: number;
+  /** The same frame with the smoke in the wet ground's mirror image, and kept out of it. */
+  drawSmokeMirroredMs: number;
+  drawSmokeNotMirroredMs: number;
 }
 
 /** What the homepage and tasks 02/03 get back from `createF2004Scene`. */

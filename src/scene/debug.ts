@@ -48,8 +48,7 @@ export class DebugOverlay {
       `calls  ${calls}\n` +
       `tris   ${triangles.toLocaleString('en-US')}\n` +
       `p      ${p.toFixed(3)}` +
-      (extra ? `
-${extra.debugText()}` : '');
+      (extra ? `\n${extra.debugText()}` : '');
     this.frames = 0;
     this.elapsed = 0;
     this.worst = 0;
