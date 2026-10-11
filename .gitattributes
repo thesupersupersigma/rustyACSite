@@ -3,3 +3,7 @@
 *.webp binary
 *.png binary
 *.blend binary
+# The ready-made assets and source files stay byte for byte as they are
+public/models/** -text
+public/textures/** -text
+assets-src/** -text
