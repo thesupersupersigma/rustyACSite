@@ -31,6 +31,8 @@ export class Debris {
 
   private active = false;
   private moving = false;
+  /** The shards moved since the last upload. */
+  private dirty = false;
   private readonly p = new Float32Array(N * 3);
   private readonly v = new Float32Array(N * 3);
   /** Per shard: size, tumble angle, tumble speed. */
@@ -51,6 +53,14 @@ export class Debris {
     this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
     this.mesh.frustumCulled = false;
     this.mesh.visible = false;
+    // until the first pop every shard has no size, so showing the mesh to compile its shader draws nothing
+    this.matrix.makeScale(0, 0, 0);
+    for (let i = 0; i < N; i++) this.mesh.setMatrixAt(i, this.matrix);
+  }
+
+  /** Shows the (empty) mesh for the warm-up frame, so the first pop does not have to build its shader. */
+  warm(on: boolean): void {
+    this.mesh.visible = on || this.active;
   }
 
   /** Throws the shards out from the two rear tyres. `random` is the scene's seeded generator. */
@@ -74,6 +84,7 @@ export class Debris {
     }
     this.active = true;
     this.moving = true;
+    this.dirty = true;
     this.mesh.visible = true;
   }
 
@@ -117,11 +128,13 @@ export class Debris {
       if (y > rest + 0.001 || Math.abs(vy) > 0.01 || Math.abs(vx) + Math.abs(vz) > 0.05) moving = true;
     }
     this.moving = moving;
+    this.dirty = true;
   }
 
-  /** Uploads the shard transforms. Once per rendered frame while any are out. */
+  /** Uploads the shard transforms. Does nothing once they have all come to rest. */
   write(): void {
-    if (!this.active) return;
+    if (!this.active || !this.dirty) return;
+    this.dirty = false;
     const { p, look, matrix, position, scale, quaternion, euler, mesh } = this;
     for (let i = 0; i < N; i++) {
       const o = i * 3;

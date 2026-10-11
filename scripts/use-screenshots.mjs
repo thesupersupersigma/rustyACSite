@@ -13,7 +13,8 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const from = path.resolve(root, process.argv[2] ?? 'assets-src/media/screenshots');
+// a folder given on the command line is relative to where the command is run
+const from = process.argv[2] ? path.resolve(process.argv[2]) : path.join(root, 'assets-src', 'media', 'screenshots');
 const to = path.join(root, 'src', 'assets', 'screenshots');
 
 /** Every screenshot the site uses, with the size it should be captured at. */
@@ -33,7 +34,6 @@ if (!existsSync(from)) {
 }
 await mkdir(to, { recursive: true });
 
-const pairs = new Map();
 let copied = 0;
 for (const shot of USED) {
   const source = path.join(from, shot.file);
@@ -47,10 +47,17 @@ for (const shot of USED) {
   await copyFile(source, path.join(to, shot.file));
   copied++;
   console.log(`copied    ${shot.file}  ${size}${size === wanted ? '' : `  (expected ${wanted})`}`);
-  if (shot.pair) pairs.set(shot.pair, [...(pairs.get(shot.pair) ?? []), size]);
 }
 
-// a before/after pair only lines up under the slider when both halves have the same size
+// A before/after pair only lines up under the slider when both halves have the same size. This looks at
+// what is in the site now, so replacing only one half of a pair is caught too.
+const pairs = new Map();
+for (const shot of USED) {
+  const file = path.join(to, shot.file);
+  if (!shot.pair || !existsSync(file)) continue;
+  const meta = await sharp(file).metadata();
+  pairs.set(shot.pair, [...(pairs.get(shot.pair) ?? []), `${meta.width}x${meta.height}`]);
+}
 for (const [pair, sizes] of pairs) {
   if (sizes.length === 2 && sizes[0] !== sizes[1]) {
     console.log(`WARNING   the ${pair} pair has two sizes (${sizes.join(' and ')}): the slider will not line up`);

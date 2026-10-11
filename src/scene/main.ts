@@ -525,7 +525,8 @@ async function buildScene(
   };
   const onContextRestored = () => {
     // image textures come back by themselves; the captured environment has to be made again
-    environment = captureEnvironment([assets.car, shadow, streaks.mesh]);
+    // (the blur discs hang off the car, which is hidden as a whole)
+    environment = captureEnvironment([assets.car, shadow, streaks.mesh, ...burnout.captureHidden]);
     track.setPlanar(planar, environment);
     refresh();
   };
@@ -575,6 +576,7 @@ async function buildScene(
     },
     setProgress(value) {
       p = Math.min(1, Math.max(0, value));
+      burnout.setProgress(p);
     },
     setReducedMotion(on) {
       reducedMotion = on;

@@ -78,12 +78,15 @@ export const SIM_WHEELS: readonly SimWheel[] = ['FL', 'FR', 'RL', 'RR'];
 /**
  * What happened during a step, in order.
  * - `throttle:on` / `throttle:off`: the engine starts / stops being driven (also fires at the pop).
- * - `limiter`: the revs reached the limiter (once per hold; `limiter` in the snapshot stays true while it bounces).
+ *   A throttle still held at the pop has to be let go once before it counts again.
+ * - `limiter`: the revs reached the limiter (once per hold, not once per ignition cut; `limiter` in the
+ *   snapshot stays true while the needle bounces, and `rpm` shows each bounce).
  * - `lightsout`: the red start lights go out (only when at least one was lit).
  * - `pop`: both rear tyres let go.
  * - `pitstop:start`, then per corner `nut:off` (the gun starts undoing), once `wheel:off` (the wheels
  *   start to slide off), once `wheel:on` (the fresh wheels are seated), per corner `nut:on` (the gun
- *   starts tightening), then `pitstop:end` (the car is back on the ground).
+ *   starts tightening), then `pitstop:end` (the car is back on the ground). An instant stop (reduced
+ *   motion) only emits `pitstop:start` and `pitstop:end`.
  */
 export type SimEventType =
   | 'throttle:on'
@@ -134,7 +137,7 @@ export interface SimSnapshot {
   wheelSpeed: number;
   /** wheelSpeed / WHEEL_MAX. */
   wheelNorm: number;
-  /** Tyre heat, 0 cold to 1 popping. */
+  /** Tyre heat, 0 cold to 1 popping. It also cools while the tyres sit flat; fresh tyres start at 0. */
   heat: number;
   /** How hard the rear tyres smoke, 0 to 1. */
   smokeRate: number;
@@ -156,6 +159,11 @@ export interface SimSnapshot {
 }
 
 const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
+/** True when the pit-stop clock passed `at` during this substep. */
+const crossed = (before: number, now: number, at: number) => before < at && now >= at;
+/** Progress (0 to 1) of a pit-stop phase that starts at `start` and lasts `length` seconds. */
+const part = (active: boolean, t: number, start: number, length: number) =>
+  active ? clamp01((t - start) / length) : 0;
 const EVENT_POOL = 32;
 
 export class BurnoutSim {
@@ -180,6 +188,8 @@ export class BurnoutSim {
   private wantPop = false;
   private wantPit = false;
   private wantPitInstant = false;
+  /** Set by the pop: the throttle has to be let go once before it can drive the engine again. */
+  private needRelease = false;
 
   private readonly events: SimEvent[] = [];
   private readonly pool: SimEvent[] = [];
@@ -275,6 +285,7 @@ export class BurnoutSim {
   private doPop(): void {
     const driving = this.state === 'revving';
     this.state = 'popped';
+    this.needRelease = true;
     this.heat = 1;
     this.flat = true;
     this.popTime = 0;
@@ -314,8 +325,9 @@ export class BurnoutSim {
     const T = TUNING;
 
     // ---- transitions driven by the throttle -------------------------------------------------------
+    if (!held) this.needRelease = false;
     if (this.state === 'idle' || this.state === 'settling') {
-      if (held) {
+      if (held && !this.needRelease) {
         this.state = 'revving';
         this.holdTime = 0;
         this.green = 0;
@@ -399,7 +411,6 @@ export class BurnoutSim {
     const before = this.pitTime;
     const now = before + h;
     this.pitTime = now;
-    const crossed = (at: number) => before < at && now >= at;
 
     const nutsOff = T.PIT_LIFT;
     const wheelsOff = nutsOff + T.PIT_NUTS_OFF;
@@ -409,15 +420,15 @@ export class BurnoutSim {
     const total = drop + T.PIT_DROP;
 
     for (let i = 0; i < SIM_WHEELS.length; i++) {
-      if (crossed(nutsOff + (T.PIT_STAGGER[i] ?? 0))) this.emit('nut:off', SIM_WHEELS[i] ?? null);
+      if (crossed(before, now, nutsOff + (T.PIT_STAGGER[i] ?? 0))) this.emit('nut:off', SIM_WHEELS[i] ?? null);
     }
-    if (crossed(wheelsOff)) this.emit('wheel:off');
-    if (crossed(wheelsOn)) this.freshTyres();
-    if (crossed(nutsOn)) this.emit('wheel:on');
+    if (crossed(before, now, wheelsOff)) this.emit('wheel:off');
+    if (crossed(before, now, wheelsOn)) this.freshTyres();
+    if (crossed(before, now, nutsOn)) this.emit('wheel:on');
     for (let i = 0; i < SIM_WHEELS.length; i++) {
-      if (crossed(nutsOn + (T.PIT_STAGGER[i] ?? 0))) this.emit('nut:on', SIM_WHEELS[i] ?? null);
+      if (crossed(before, now, nutsOn + (T.PIT_STAGGER[i] ?? 0))) this.emit('nut:on', SIM_WHEELS[i] ?? null);
     }
-    if (crossed(drop)) this.green = T.GREEN_SECONDS;
+    if (crossed(before, now, drop)) this.green = T.GREEN_SECONDS;
     this.pitShown = Math.min(now, total);
     if (now >= total) {
       this.pitTime = total;
@@ -461,18 +472,17 @@ export class BurnoutSim {
     const nutsOn = wheelsOn + T.PIT_WHEELS_ON;
     const drop = nutsOn + T.PIT_NUTS_ON;
     let maxStagger = 0;
-    for (const s of T.PIT_STAGGER) if (s > maxStagger) maxStagger = s;
-    const part = (start: number, length: number) => (active ? clamp01((t - start) / length) : 0);
+    for (let i = 0; i < T.PIT_STAGGER.length; i++) maxStagger = Math.max(maxStagger, T.PIT_STAGGER[i] ?? 0);
 
-    pit.lift = part(0, T.PIT_LIFT);
-    pit.drop = part(drop, T.PIT_DROP);
+    pit.lift = part(active, t, 0, T.PIT_LIFT);
+    pit.drop = part(active, t, drop, T.PIT_DROP);
     for (let i = 0; i < SIM_WHEELS.length; i++) {
       const late = T.PIT_STAGGER[i] ?? 0;
       // every corner finishes inside its phase: the late ones just move a little faster
-      pit.nutsOff[i] = part(nutsOff + late, T.PIT_NUTS_OFF - maxStagger);
-      pit.wheelsOff[i] = part(wheelsOff + late, T.PIT_WHEELS_OFF - maxStagger);
-      pit.wheelsOn[i] = part(wheelsOn + late, T.PIT_WHEELS_ON - maxStagger);
-      pit.nutsOn[i] = part(nutsOn + late, T.PIT_NUTS_ON - maxStagger);
+      pit.nutsOff[i] = part(active, t, nutsOff + late, T.PIT_NUTS_OFF - maxStagger);
+      pit.wheelsOff[i] = part(active, t, wheelsOff + late, T.PIT_WHEELS_OFF - maxStagger);
+      pit.wheelsOn[i] = part(active, t, wheelsOn + late, T.PIT_WHEELS_ON - maxStagger);
+      pit.nutsOn[i] = part(active, t, nutsOn + late, T.PIT_NUTS_ON - maxStagger);
     }
   }
 }

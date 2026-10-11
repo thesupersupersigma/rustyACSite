@@ -348,3 +348,60 @@ describe('robustness', () => {
     expect(second.events).toBe(first.events);
   });
 });
+
+describe('edge cases', () => {
+  it('needs the throttle let go after a pop before it counts again', () => {
+    const sim = popped();
+    const seen: SimEventType[] = [];
+    sim.requestPitStop();
+    // still held through the whole stop and a second after it
+    run(sim, pitTotal() + 1, true, seen);
+    expect(sim.out.state).toBe('idle');
+    expect(seen).not.toContain('throttle:on');
+    run(sim, 0.1, false, seen);
+    expect(run(sim, 0.5, true, seen).state).toBe('revving');
+    expect(seen.filter((e) => e === 'throttle:on')).toHaveLength(1);
+  });
+
+  it('pops at the same moment whatever the frame rate', () => {
+    const popTime = (dt: number) => {
+      const sim = new BurnoutSim();
+      let t = 0;
+      while (sim.out.state !== 'popped' && t < 20) {
+        sim.step(dt, true);
+        t += dt;
+      }
+      return t;
+    };
+    for (const dt of [1 / 30, 1 / 60, 1 / 144, 0.1]) {
+      expect(popTime(dt)).toBeGreaterThanOrEqual(TUNING.POP_SECONDS - 1e-6);
+      expect(popTime(dt)).toBeLessThan(TUNING.POP_SECONDS + dt + 1e-6);
+    }
+  });
+
+  it('treats a broken clock (NaN, Infinity, negative) as no time at all', () => {
+    const sim = new BurnoutSim();
+    run(sim, 1, true);
+    const { rpm, heat, holdTime } = sim.out;
+    for (const dt of [NaN, Infinity, -Infinity, -1]) sim.step(dt, true);
+    expect(sim.out.rpm).toBe(rpm);
+    expect(sim.out.heat).toBe(heat);
+    expect(sim.out.holdTime).toBe(holdTime);
+  });
+
+  it('ignores a pop request while popped or in the pits, and a second pit-stop request', () => {
+    const sim = popped();
+    const seen: SimEventType[] = [];
+    sim.requestPop();
+    run(sim, 0.2, false, seen);
+    sim.requestPitStop();
+    run(sim, 0.5, false, seen);
+    sim.requestPop();
+    sim.requestPitStop();
+    run(sim, pitTotal() + 0.5, false, seen);
+    expect(seen.filter((e) => e === 'pop')).toHaveLength(0);
+    expect(seen.filter((e) => e === 'pitstop:start')).toHaveLength(1);
+    expect(seen.filter((e) => e === 'pitstop:end')).toHaveLength(1);
+    expect(sim.out.state).toBe('idle');
+  });
+});

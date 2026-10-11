@@ -15,10 +15,10 @@ export interface BurnoutEvents {
 export class Emitter implements BurnoutEvents {
   private readonly listeners = new Map<string, BurnoutListener[]>();
 
+  // on() and off() replace the list instead of changing it, so a listener may remove itself (or add
+  // another) while an event is being delivered without upsetting that delivery.
   on(type: BurnoutEventType | '*', listener: BurnoutListener): () => void {
-    const list = this.listeners.get(type);
-    if (list) list.push(listener);
-    else this.listeners.set(type, [listener]);
+    this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
     return () => this.off(type, listener);
   }
 
@@ -26,7 +26,7 @@ export class Emitter implements BurnoutEvents {
     const list = this.listeners.get(type);
     if (!list) return;
     const i = list.indexOf(listener);
-    if (i >= 0) list.splice(i, 1);
+    if (i >= 0) this.listeners.set(type, [...list.slice(0, i), ...list.slice(i + 1)]);
   }
 
   emit(event: BurnoutEvent): void {

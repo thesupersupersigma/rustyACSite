@@ -1,17 +1,17 @@
 // Builds the checked-in brand files. The outputs are committed.
 //
-//   npm run og                        public/og/rustyac-og.webp, the 1200x630 share image, from
-//                                     src/assets/logo-mark.png and a burnout screenshot
-//   node scripts/make-brand.mjs mark  also src/assets/logo-mark.png (the logo without its lettering),
-//                                     public/favicon.png and public/apple-touch-icon.png
+//   npm run og                         public/og/rustyac-og.webp, the 1200x630 share image, from
+//                                      src/assets/logo-mark.png and a burnout screenshot
+//   node scripts/make-brand.mjs icons  also public/favicon.png and public/apple-touch-icon.png, from
+//                                      src/assets/logo-mark.png
 //
 // The share image prefers src/assets/screenshots/og_burnout.png (2400x1260: the car on the left, calm
 // tarmac along the bottom, where the wordmark goes) and falls back to the older
 // renderer_car_burnout.png with the wordmark on the left.
 //
-// The `mark` step masks the lettering out of the logo by pixel position, so it only fits the logo
-// file it was written for. After a new logo, make logo-mark.png by hand (or rewrite `logoMark`) and
-// run plain `npm run og`.
+// Nothing here knows what the logo looks like: src/assets/logo-mark.png (the mark without lettering,
+// transparent background) is used as it is. After a new logo, replace that file and
+// src/assets/logo.png, then run `node scripts/make-brand.mjs icons`.
 import sharp from 'sharp';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -22,11 +22,10 @@ import path from 'node:path';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const at = (p) => path.join(root, p);
 
-const LOGO = at('src/assets/logo.png');
 const MARK = at('src/assets/logo-mark.png');
 const SHOT_WIDE = at('src/assets/screenshots/og_burnout.png');
 const SHOT_OLD = at('src/assets/screenshots/renderer_car_burnout.png');
-const withMark = process.argv.includes('mark');
+const withIcons = process.argv.includes('icons');
 
 // Pango (sharp's text renderer) reads TTF but not WOFF, so the npm fonts are unpacked first.
 // WOFF 1 is an sfnt whose tables are individually zlib-compressed.
@@ -80,27 +79,14 @@ const MONO = await woffToTtf(
   at('scratch/task01/fonts/jetbrains-mono-400.ttf'),
 );
 
-// The lettering sits below y=566 in the 1332x737 source, right of a slanted line that the left stroke
-// of the mark stays clear of, so the lettering is masked out instead of cropped.
-async function logoMark() {
-  const { data, info } = await sharp(LOGO).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  for (let y = 566; y < info.height; y++) {
-    const from = y > 668 ? 0 : Math.round(378 - (y - 566) * 0.3);
-    for (let x = from; x < info.width; x++) data[(y * info.width + x) * 4 + 3] = 0;
-  }
-  return sharp(data, { raw: info }).trim().png({ compressionLevel: 9 }).toBuffer();
-}
-
 function text(markup, font, fontfile, dpi) {
   return sharp({ text: { text: markup, font, fontfile, rgba: true, dpi } }).png().toBuffer();
 }
 
-if (withMark) {
-  const fresh = await logoMark();
-  await sharp(fresh).resize({ height: 360 }).png({ compressionLevel: 9 }).toFile(MARK);
-
+if (withIcons) {
+  const logo = await readFile(MARK);
   const square = (size) =>
-    sharp(fresh)
+    sharp(logo)
       .resize({ width: Math.round(size * 0.9), height: Math.round(size * 0.9), fit: 'contain', background: '#0000' })
       .extend({
         top: Math.round(size * 0.05),
@@ -111,7 +97,7 @@ if (withMark) {
       });
   await square(96).png().toFile(at('public/favicon.png'));
   await square(180).flatten({ background: '#0E0E0E' }).png().toFile(at('public/apple-touch-icon.png'));
-  console.log('logo mark and icons written');
+  console.log('icons written');
 }
 
 // ---- share image ----------------------------------------------------------------------------------

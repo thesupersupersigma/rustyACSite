@@ -18,7 +18,7 @@ and the share image below are the new ones.
 | `src/assets/screenshots/renderer_core_monza_debug.png` | `docs/port/renderer_core_monza_debug.png` | same slider, "Monza" tab, "debug view" | 2560×1440 (was 1024×576) | 2240×1260 | 2560×1440, the same frame as its pair |
 | `src/assets/screenshots/renderer_core_laguna_seca.png` | `docs/port/renderer_core_laguna_seca.png` | same slider, "Laguna Seca" tab, "AC's shaders" | 2560×1440 (was 1280×720) | 2240×1260 | 2560×1440 |
 | `src/assets/screenshots/renderer_core_laguna_seca_debug.png` | `docs/port/renderer_core_laguna_seca_debug.png` | same slider, "Laguna Seca" tab, "debug view" | 2560×1440 (was 1280×720) | 2240×1260 | 2560×1440, the same frame as its pair |
-| `src/assets/screenshots/og_burnout.png` | new capture (no `docs/port` file); it replaces `docs/port/renderer_car_burnout.png` as the share image's source | `scripts/make-brand.mjs` → `public/og/rustyac-og.webp` | 2400×1260 | 1200×630 (the share image's fixed size) | 2400×1260 |
+| `src/assets/screenshots/og_burnout.png` | new capture from `tools/site_media/shots.sh` (no `docs/port` file); it replaces `docs/port/renderer_car_burnout.png` as the share image's source | `scripts/make-brand.mjs` → `public/og/rustyac-og.webp` | 2400×1260 | 1200×630 (the share image's fixed size) | 2400×1260 |
 | `src/assets/screenshots/renderer_car_burnout.png` | `docs/port/renderer_car_burnout.png` | `scripts/make-brand.mjs`, only as the fallback when `og_burnout.png` is missing | 1152×648 | not shown while `og_burnout.png` exists | no recapture needed |
 
 The old Monza pair was two different sizes (1152×648 and 1024×576); the new pair matches.
@@ -38,8 +38,13 @@ task 04): `hero_burnout.png` and the eight `gallery_*.png` (`gallery_488_gt3_lag
 `gallery_f2004_spa_trackside`, `gallery_f40_monza`, `gallery_heavy_clouds`, `gallery_night_lights`),
 all 2560×1440. When a page shows one full-width, 2560×1440 is the right size.
 
-`assets-src/screenshots/` still holds the 31 older 1280×720 copies of `docs/port/*.png`. The site
-does not read that folder.
+`assets-src/screenshots/` still holds the 31 older, smaller copies of `docs/port/*.png` (960×540 up
+to 1280×720). The site does not read that folder.
+
+**How each picture was captured:** `assets-src/media/README.md` lists the exact `rustyac.exe` command
+for every file (car, track, time, camera, size), including the 2400×1260 `og_burnout.png`. In the
+rustyAC repo the script that runs them all is `tools/site_media/shots.sh`, and the write-up is
+`docs/site_media.md`.
 
 ## How the site handles the big files
 

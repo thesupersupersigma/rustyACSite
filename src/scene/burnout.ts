@@ -2,7 +2,8 @@
 // sim.ts decides what happens; this file makes the car, the lights and the page show it.
 //
 // Two halves: `advance(dt)` steps the simulation and everything that integrates over time, and
-// `apply()` writes the current state onto the three.js objects. The test hooks (`sim.hold()` and
+// `apply()` writes the current state onto the three.js objects. Both run every frame, so neither
+// creates objects, arrays, closures or strings (the loops in them are indexed for that reason). The test hooks (`sim.hold()` and
 // friends) call `advance` in fixed steps, which is what makes the check screenshots repeatable.
 import {
   CanvasTexture,
@@ -64,6 +65,8 @@ export const LOOK = {
   /** The blur disc sits this share of the rim's half width out from the hub, and is this share of its radius. */
   BLUR_OFFSET: 0.62,
   BLUR_RADIUS: 0.95,
+  /** Brightness of the blur disc compared with the rim's average colour. */
+  BLUR_BRIGHTNESS: 1.3,
 
   // ---- lights ------------------------------------------------------------------------------------
   /** Emissive strength of the steering-wheel rev LEDs at the limiter. */
@@ -71,7 +74,7 @@ export const LOOK = {
   /** How bright a lit start-light pod is (above 1 so the bloom picks it up). */
   LIGHT_GLOW: 5,
   /** Strength of the light the five lit pods throw onto the car (the gantry is behind the hero camera). */
-  GANTRY_GLOW: 120,
+  GANTRY_GLOW: 80,
 
   /** How far the rear wheels' textures smear into one colour at full speed (lettering and decals stop strobing). */
   SMEAR: 0.85,
@@ -282,6 +285,13 @@ export class Burnout {
   // ---- the car ----------------------------------------------------------------------------------------
   private readonly frontZ: number;
   private readonly wheelbase: number;
+  // per wheel, in FL, FR, RL, RR order (plain arrays, so the frame code never looks anything up by name)
+  private readonly hubNodes: Object3D[] = [];
+  private readonly wheelNodes: Object3D[] = [];
+  private readonly nutNodes: Object3D[] = [];
+  /** +1 on the car's left, -1 on its right: the way a wheel or nut comes off. */
+  private readonly wheelSide: number[] = [];
+  private readonly wheelFront: boolean[] = [];
   private readonly hubBaseY: number[] = [];
   private readonly nutBase: Vector3[] = [];
   private readonly nutScale: number[] = [];
@@ -378,6 +388,11 @@ export class Burnout {
     const clones = new Map<string, MeshStandardMaterial>();
     for (const id of WHEEL_IDS) {
       const rear = id.startsWith('R');
+      this.hubNodes.push(car.hubs[id]);
+      this.wheelNodes.push(car.wheels[id]);
+      this.nutNodes.push(car.nuts[id]);
+      this.wheelSide.push(sideOf(id));
+      this.wheelFront.push(!rear);
       this.hubBaseY.push(car.hubs[id].position.y);
       this.nutBase.push(car.nuts[id].position.clone());
       this.nutScale.push(car.nuts[id].scale.x);
@@ -423,7 +438,13 @@ export class Burnout {
       metalness: rim instanceof MeshStandardMaterial ? rim.metalness : 0.6,
       roughness: rim instanceof MeshStandardMaterial ? Math.max(0.35, rim.roughness) : 0.45,
     });
-    if (rim instanceof MeshStandardMaterial) averageColor(rim, this.blurMaterial.color);
+    // a little brighter than the rim's average: the smear catches the light the spokes would
+    if (rim instanceof MeshStandardMaterial) averageColor(rim, this.blurMaterial.color).multiplyScalar(LOOK.BLUR_BRIGHTNESS);
+    if (rim instanceof MeshStandardMaterial) {
+      // the environment map was handed out before this material existed
+      this.blurMaterial.envMap = rim.envMap;
+      this.blurMaterial.envMapIntensity = rim.envMapIntensity;
+    }
     ctx.carMaterials.push(this.blurMaterial);
     const discGeometry = new CircleGeometry(rimSize.radius * LOOK.BLUR_RADIUS, 40);
     for (const id of ['RL', 'RR'] as const) {
@@ -523,17 +544,31 @@ export class Burnout {
 
   /** Once per rendered frame, before the camera and the draw. `p` is the scroll progress. */
   update(dt: number, p: number): void {
-    // the controls only exist in the stage phase; leaving it lets go of the throttle
-    this.controls.setStage(p >= 0.2 && p <= 0.8);
+    this.setProgress(p);
     if (!this.manual) this.advance(dt, this.controls.held);
     this.apply();
+  }
+
+  /**
+   * The scroll progress, straight from the scroll handler. The controls only exist in the stage phase
+   * (0.2 to 0.8) and leaving it lets go of the throttle. This must not wait for a rendered frame: the
+   * frame loop stops when the section is off screen, and Space has to go back to the page then.
+   */
+  setProgress(p: number): void {
+    this.controls.setStage(p >= 0.2 && p <= 0.8);
   }
 
   /** Shows the parts that are normally hidden, so the first frame can compile their shaders. */
   setWarm(on: boolean): void {
     this.warm = on;
     this.smoke.warm(on);
+    this.debris.warm(on);
     this.apply();
+  }
+
+  /** Everything this file added to the scene that must not end up in the car's environment map. */
+  get captureHidden(): Object3D[] {
+    return [this.smoke.mesh, this.debris.mesh, ...this.rubberMeshes];
   }
 
   /** Particles alive right now. */
@@ -628,7 +663,8 @@ export class Burnout {
   /** Runs the simulation for `seconds` in fixed steps (the test hooks). Zero still handles requests. */
   private run(seconds: number): void {
     const steps = Math.max(0, Math.round(seconds / FIXED_STEP));
-    if (steps === 0) this.advance(0, this.manualHeld);
+    // a step of no time runs no substep, and the throttle edge lives in the substep
+    if (steps === 0) this.advance(1e-6, this.manualHeld);
     for (let i = 0; i < steps; i++) this.advance(FIXED_STEP, this.manualHeld);
     this.apply();
   }
@@ -720,6 +756,8 @@ export class Burnout {
         this.debris.clear();
         break;
       case 'pitstop:end':
+        // (an instant stop has no wheel:off, so the shards go here)
+        this.debris.clear();
         controls.setMode('rev');
         controls.announce('Back on fresh tyres');
         this.timerLeft = LOOK.TIMER_STAYS;
@@ -731,82 +769,113 @@ export class Burnout {
     }
   }
 
+  /** Writes the current state onto the scene. Split up so each part stays small and simple. */
   private apply(): void {
     const s = this.snap;
-    const { car, rig } = this.ctx;
-    const calm = this.ctx.getReducedMotion();
-    const pit = s.pit;
-    const rpm = clamp01(s.rpmNorm);
-    const t = this.clock;
-
-    // ---- rear wheels ---------------------------------------------------------------------------------
-    car.wheels.RL.rotation.x = this.wheelAngle;
-    car.wheels.RR.rotation.x = this.wheelAngle;
     const blur = this.warm ? 1 : smoothstep(LOOK.BLUR_START, LOOK.BLUR_FULL, s.wheelSpeed);
+    this.applyRearWheels(s, blur);
+    this.applyEffects();
+    this.applyPitStop(s.pit, blur);
+    this.applyBody(s);
+    this.applyLights(s);
+
+    const rpm = clamp01(s.rpmNorm);
+    this.ctx.rig.setShake(this.ctx.getReducedMotion() ? 0 : LOOK.CAMERA_SHAKE * rpm * this.throttle);
+    this.controls.setRev(s.state === 'popped' || s.state === 'pitstop' ? 1 : s.rpmNorm);
+    this.controls.setTimer(s.pit.time, s.pit.active || this.timerLeft > 0);
+  }
+
+  /** Spin, the blur disc, the smear, the heat glow and the flat-tyre squash. */
+  private applyRearWheels(s: SimSnapshot, blur: number): void {
+    const angle = this.wheelAngle;
+    (this.wheelNodes[2] as Object3D).rotation.x = angle;
+    (this.wheelNodes[3] as Object3D).rotation.x = angle;
     this.blurMaterial.opacity = blur * LOOK.BLUR_OPACITY;
-    for (const disc of this.blurDiscs) disc.visible = blur > 0.01;
+    for (let i = 0; i < this.blurDiscs.length; i++) (this.blurDiscs[i] as Mesh).visible = blur > 0.01;
     this.smear.value = blur * LOOK.SMEAR;
 
-    // ---- heat: a rust glow on the tread that dies quickly once the tyre has let go ----------------------
+    // heat: a rust glow on the tread that dies quickly once the tyre has let go
     const hot = smoothstep(LOOK.HEAT_VISIBLE, 1, s.heat);
     const glow = hot * hot * (s.flat ? Math.max(0, 1 - s.popTime / 0.7) : 1);
-    for (const m of this.hotTyres) m.emissiveIntensity = LOOK.HEAT_GLOW * glow;
+    for (let i = 0; i < this.hotTyres.length; i++) {
+      (this.hotTyres[i] as MeshStandardMaterial).emissiveIntensity = LOOK.HEAT_GLOW * glow;
+    }
 
-    // ---- smoke, shards, rubber ---------------------------------------------------------------------------
+    // Flat tyres are squashed about the hub, in the hub's frame (the wheel may have stopped at any
+    // angle). One hanging in the air on the jacks is less squashed than one carrying the car.
+    const lifted = s.pit.active ? easeOutCubic(s.pit.lift) : 0;
+    const flat = s.flat ? popEase(s.popTime) * (1 - 0.5 * lifted) : 0;
+    for (let i = 0; i < this.rearTyres.length; i++) {
+      const tyre = this.rearTyres[i] as Mesh;
+      tyre.matrix.compose(this.rearTyrePos[i] as Vector3, this.noRotation, this.rearTyreScale[i] as Vector3);
+      if (flat !== 0) {
+        this.mA.makeRotationX(-angle);
+        this.mB.makeScale(1 + LOOK.FLAT_WIDEN * flat, 1 - (1 - this.flatHeight) * flat, 1 + 0.03 * flat);
+        this.mC.makeRotationX(angle);
+        tyre.matrix.premultiply(this.mC).premultiply(this.mB).premultiply(this.mA);
+      }
+      tyre.matrixWorldNeedsUpdate = true;
+    }
+  }
+
+  /** Smoke, shards and the rubber on the track. */
+  private applyEffects(): void {
     this.smoke.setCap(SMOKE.CAP[this.ctx.getTier()]);
     this.smoke.write(this.ctx.camera.position);
     this.debris.write();
     const rubber = this.warm ? 0.01 : this.rubber * LOOK.RUBBER_MAX;
     this.rubberMaterial.opacity = rubber;
-    for (const patch of this.rubberMeshes) patch.visible = rubber > 0.004;
+    for (let i = 0; i < this.rubberMeshes.length; i++) (this.rubberMeshes[i] as Mesh).visible = rubber > 0.004;
+  }
 
-    // ---- the pit stop's wheels and nuts ----------------------------------------------------------------
+  /** The pit stop's wheels and nuts (and every wheel part's opacity, which the blur also touches). */
+  private applyPitStop(pit: SimSnapshot['pit'], blur: number): void {
     let fade = 1;
     if (pit.active) {
       let off = 0;
       let on = 0;
       for (let i = 0; i < 4; i++) {
-        off += (pit.wheelsOff[i] ?? 0) / 4;
-        on += (pit.wheelsOn[i] ?? 0) / 4;
+        off += (pit.wheelsOff[i] as number) / 4;
+        on += (pit.wheelsOn[i] as number) / 4;
       }
       fade = on > 0 ? smoothstep(0, 0.8, on) : 1 - smoothstep(0.2, 1, off);
     }
-    for (const m of this.wheelMaterials) {
+    for (let i = 0; i < this.wheelMaterials.length; i++) {
+      const m = this.wheelMaterials[i] as MeshStandardMaterial;
       m.opacity = fade * (this.rearSpin.has(m) ? 1 - blur * LOOK.RIM_FADE : 1);
     }
-    for (let i = 0; i < WHEEL_IDS.length; i++) {
-      const id = WHEEL_IDS[i];
-      const base = this.nutBase[i];
-      if (!id || !base) continue;
-      const side = sideOf(id);
-      const wheel = car.wheels[id];
-      const nut = car.nuts[id];
-      const scale = this.nutScale[i] ?? 1;
-      const wheelOff = pit.wheelsOff[i] ?? 0;
-      const wheelOn = pit.wheelsOn[i] ?? 0;
-      const nutOff = pit.nutsOff[i] ?? 0;
-      const nutOn = pit.nutsOn[i] ?? 0;
+
+    for (let i = 0; i < 4; i++) {
+      const wheel = this.wheelNodes[i] as Object3D;
+      const nut = this.nutNodes[i] as Object3D;
+      const base = this.nutBase[i] as Vector3;
+      const scale = this.nutScale[i] as number;
+      const side = this.wheelSide[i] as number;
+      nut.position.copy(base);
 
       if (!pit.active) {
         wheel.position.x = 0;
         wheel.visible = true;
-        nut.position.copy(base);
         nut.rotation.x = 0;
         nut.scale.setScalar(scale);
         nut.visible = true;
         continue;
       }
 
+      const wheelOff = pit.wheelsOff[i] as number;
+      const wheelOn = pit.wheelsOn[i] as number;
+      const nutOff = pit.nutsOff[i] as number;
+      const nutOn = pit.nutsOn[i] as number;
+
       if (wheelOn > 0) wheel.position.x = side * LOOK.WHEEL_SLIDE * (1 - easeOutCubic(wheelOn));
       else wheel.position.x = side * LOOK.WHEEL_SLIDE * easeInCubic(wheelOff);
       wheel.visible = wheelOn > 0 || wheelOff < 1;
 
-      nut.position.copy(base);
-      nut.scale.setScalar(scale);
       if (nutOn > 0) {
         // back on: slides in while it spins the other way
         nut.position.x += side * LOOK.NUT_SLIDE * (1 - easeOutCubic(nutOn));
         nut.rotation.x = -side * (1 - nutOn) * LOOK.NUT_TURNS * TAU;
+        nut.scale.setScalar(scale);
         nut.visible = true;
       } else if (wheelOff > 0 || nutOff >= 1) {
         nut.visible = false;
@@ -824,30 +893,23 @@ export class Burnout {
         nut.visible = true;
       }
     }
+  }
 
-    // ---- flat rear tyres: squashed about the hub, in the hub's frame (the wheel may have stopped at any angle)
-    const flat = s.flat ? popEase(s.popTime) : 0;
-    for (let i = 0; i < this.rearTyres.length; i++) {
-      const tyre = this.rearTyres[i];
-      const pos = this.rearTyrePos[i];
-      const scale = this.rearTyreScale[i];
-      if (!tyre || !pos || !scale) continue;
-      tyre.matrix.compose(pos, this.noRotation, scale);
-      if (flat !== 0) {
-        const angle = this.wheelAngle;
-        this.mA.makeRotationX(-angle);
-        this.mB.makeScale(1 + LOOK.FLAT_WIDEN * flat, 1 - (1 - this.flatHeight) * flat, 1 + 0.03 * flat);
-        this.mC.makeRotationX(angle);
-        tyre.matrix.premultiply(this.mC).premultiply(this.mB).premultiply(this.mA);
-      }
-      tyre.matrixWorldNeedsUpdate = true;
-    }
+  /** Squat, nose lift, shake, yaw wiggle, the flat-tyre sag and the jacks. */
+  private applyBody(s: SimSnapshot): void {
+    const pit = s.pit;
+    const calm = this.ctx.getReducedMotion();
+    const rpm = clamp01(s.rpmNorm);
+    const t = this.clock;
 
-    // ---- the body ------------------------------------------------------------------------------------
-    // whole car (wheels included): the jacks, and the rear sitting down on flat tyres
-    const jack = pit.active ? LOOK.JACK_LIFT * (easeOutCubic(pit.lift) - easeInQuad(pit.drop)) : 0;
+    // Whole car, wheels included: the jacks, and the rear sitting down on flat tyres. The jack lifts the
+    // rear out of that sag, so the car is level before the wheels come off and nothing jumps when the
+    // fresh ones arrive.
+    const lifted = pit.active ? easeOutCubic(pit.lift) : 0;
+    const jack = pit.active ? LOOK.JACK_LIFT * (lifted - easeInQuad(pit.drop)) : 0;
+    const sag = s.flat ? popEase(s.popTime) * (1 - lifted) : 0;
     const carFront = jack;
-    const carRear = jack - LOOK.POP_DROP * flat;
+    const carRear = jack - LOOK.POP_DROP * sag;
     // suspension (the wheels stay on the ground): squat, nose lift, and the bounce after landing
     const land =
       this.landTime < 0.8 && !calm
@@ -856,45 +918,42 @@ export class Burnout {
     const susFront = LOOK.NOSE_LIFT * this.throttle + land;
     const susRear = -LOOK.SQUAT_REAR * this.throttle + land;
     // shake and wiggle grow with the revs; none of it with reduced motion
-    const buzz = calm ? 0 : (0.12 + 0.88 * rpm) * (s.state === 'pitstop' ? 0 : 1);
+    const buzz = calm || pit.active ? 0 : 0.12 + 0.88 * rpm;
     const shake = buzz * LOOK.SHAKE * (Math.sin(t * 201) * 0.6 + Math.sin(t * 317 + 1.3) * 0.4);
     const roll = buzz * LOOK.SHAKE_ROLL * (Math.sin(t * 173 + 0.7) * 0.6 + Math.sin(t * 291) * 0.4);
-    const wiggle = calm ? 0 : clamp01(s.wheelNorm) * LOOK.YAW_WIGGLE * (Math.sin(t * 4.1) * 0.65 + Math.sin(t * 6.7 + 2) * 0.35);
+    const wiggle = calm
+      ? 0
+      : clamp01(s.wheelNorm) * LOOK.YAW_WIGGLE * (Math.sin(t * 4.1) * 0.65 + Math.sin(t * 6.7 + 2) * 0.35);
 
     const frontDy = carFront + susFront + shake;
     const rearDy = carRear + susRear + shake;
     const pitch = (rearDy - frontDy) / this.wheelbase;
-    const root = car.root;
+    const root = this.ctx.car.root;
     root.rotation.set(pitch, wiggle, roll);
     // pitch and yaw both pivot on the front axle: the fronts are held on the brakes
     root.position.set(-this.frontZ * Math.sin(wiggle), frontDy + pitch * this.frontZ, 0);
-    for (let i = 0; i < WHEEL_IDS.length; i++) {
-      const id = WHEEL_IDS[i];
-      if (!id) continue;
-      car.hubs[id].position.y = (this.hubBaseY[i] ?? 0) - (id.startsWith('F') ? susFront : susRear);
+    for (let i = 0; i < 4; i++) {
+      (this.hubNodes[i] as Object3D).position.y =
+        (this.hubBaseY[i] as number) - (this.wheelFront[i] ? susFront : susRear);
     }
+  }
 
-    // ---- lights --------------------------------------------------------------------------------------
+  /** The rev LEDs, the start-light pods and the glow they throw on the car. */
+  private applyLights(s: SimSnapshot): void {
     if (this.led) {
-      const blink = s.limiter && Math.sin(t * TAU * 11) < 0;
-      this.led.emissiveIntensity = blink ? 0 : LOOK.LED_GLOW * smoothstep(0.05, 0.85, rpm);
+      const blink = s.limiter && Math.sin(this.clock * TAU * 11) < 0;
+      this.led.emissiveIntensity = blink ? 0 : LOOK.LED_GLOW * smoothstep(0.05, 0.85, clamp01(s.rpmNorm));
     }
     const shown = s.green ? -1 : s.lights;
-    if (shown !== this.lightsShown) {
-      this.lightsShown = shown;
-      const pods = this.ctx.startLights;
-      this.gantryGlow.color.copy(shown < 0 ? this.lightGreen : this.lightRed).multiplyScalar(1 / LOOK.LIGHT_GLOW);
-      this.gantryGlow.intensity = (LOOK.GANTRY_GLOW * (shown < 0 ? pods.length : shown)) / Math.max(1, pods.length);
-      for (let i = 0; i < pods.length; i++) {
-        const material = pods[i]?.material;
-        if (!material || Array.isArray(material) || !('color' in material)) continue;
-        (material.color as Color).copy(shown < 0 ? this.lightGreen : i < shown ? this.lightRed : this.lightDark);
-      }
+    if (shown === this.lightsShown) return;
+    this.lightsShown = shown;
+    const pods = this.ctx.startLights;
+    this.gantryGlow.color.copy(shown < 0 ? this.lightGreen : this.lightRed).multiplyScalar(1 / LOOK.LIGHT_GLOW);
+    this.gantryGlow.intensity = (LOOK.GANTRY_GLOW * (shown < 0 ? pods.length : shown)) / Math.max(1, pods.length);
+    for (let i = 0; i < pods.length; i++) {
+      const material = pods[i]?.material;
+      if (!material || Array.isArray(material) || !('color' in material)) continue;
+      (material.color as Color).copy(shown < 0 ? this.lightGreen : i < shown ? this.lightRed : this.lightDark);
     }
-
-    // ---- camera and page -----------------------------------------------------------------------------
-    rig.setShake(calm ? 0 : LOOK.CAMERA_SHAKE * rpm * this.throttle);
-    this.controls.setRev(s.state === 'popped' || s.state === 'pitstop' ? 1 : s.rpmNorm);
-    this.controls.setTimer(pit.time, pit.active || this.timerLeft > 0);
   }
 }

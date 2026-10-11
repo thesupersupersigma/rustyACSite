@@ -13,7 +13,8 @@ const CSS = /* css */ `
 .rev {
   position: absolute;
   left: 50%;
-  bottom: clamp(20px, 5vh, 44px);
+  /* room below the button for the hint, which is out of the flow so the button never moves */
+  bottom: clamp(52px, 9vh, 76px);
   z-index: 2;
   display: grid;
   justify-items: center;
@@ -70,6 +71,10 @@ const CSS = /* css */ `
 .rev__btn.is-pit .rev__fill { stroke-dashoffset: 0; }
 .rev__label { position: relative; max-width: 5.5em; text-align: center; pointer-events: none; }
 .rev__hint {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
   margin: 0;
   padding: 4px 10px;
   border-radius: 999px;
@@ -106,6 +111,11 @@ const CSS = /* css */ `
 }
 `;
 
+/** How long after the release of a popped hold a click still counts as that release, in ms. */
+const SWALLOW_MS = 450;
+/** How long after the pop a Space press on the page is ignored, in ms. */
+const PIT_KEY_DELAY_MS = 600;
+
 const LABEL: Record<ControlMode, string> = { rev: 'Hold to rev', pit: 'Pit stop', busy: 'Pit stop' };
 
 function isOtherControl(el: Element | null, own: Element): boolean {
@@ -124,7 +134,12 @@ export class Controls {
   private pointerId = -1;
   private spaceDown = false;
   private enterDown = false;
+  /** A hold was down when the tyres popped: the click its release produces is not a "Pit stop" click. */
   private swallowClick = false;
+  /** Clicks before this time (performance.now) are that same release; a touch tap's click can arrive late. */
+  private swallowUntil = 0;
+  /** Space presses before this time are ignored in "Pit stop" mode: a reflex second tap right after the pop. */
+  private pitKeyFrom = 0;
   private hintGone = false;
   private ringStep = -1;
   private timerCentis = -1;
@@ -183,7 +198,7 @@ export class Controls {
     b.addEventListener('click', this.onClick);
     b.addEventListener('contextmenu', this.onContextMenu);
     b.addEventListener('keydown', this.onButtonKeyDown);
-    b.addEventListener('keyup', this.onButtonKeyUp);
+    b.addEventListener('blur', this.onButtonBlur);
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
     window.addEventListener('pointerup', this.onAnyRelease, true);
@@ -207,6 +222,7 @@ export class Controls {
     if (mode === this.mode) return;
     // a hold that is still down when the tyres pop must not count as a click on "Pit stop"
     if (mode !== 'rev' && this.held) this.swallowClick = true;
+    if (mode === 'pit') this.pitKeyFrom = performance.now() + PIT_KEY_DELAY_MS;
     this.mode = mode;
     this.releaseAll();
     const b = this.button;
@@ -297,6 +313,8 @@ export class Controls {
     e.stopPropagation();
     if (this.mode !== 'rev' || !this.inStage) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    // a second finger must not take the hold over from the first
+    if (this.pointerId !== -1) return;
     e.preventDefault();
     this.button.focus({ preventScroll: true });
     this.pointerId = e.pointerId;
@@ -315,18 +333,18 @@ export class Controls {
   };
 
   /**
-   * Any pointer or key going up ends the hold that was down during the pop. The click that such a
-   * release produces arrives before any timer, so the flag is dropped right after it.
+   * Any pointer or key going up ends the hold that was down during the pop. The click such a release
+   * produces follows at once for a mouse and a moment later for a touch tap, so it is ignored for a
+   * short while instead of until the next timer tick.
    */
   private readonly onAnyRelease = (): void => {
-    if (this.swallowClick) window.setTimeout(() => (this.swallowClick = false), 0);
+    if (!this.swallowClick) return;
+    this.swallowClick = false;
+    this.swallowUntil = performance.now() + SWALLOW_MS;
   };
 
   private readonly onClick = (): void => {
-    if (this.swallowClick) {
-      this.swallowClick = false;
-      return;
-    }
+    if (this.swallowClick || performance.now() < this.swallowUntil) return;
     if (this.mode === 'pit' && this.inStage) this.onPitStop?.();
   };
 
@@ -336,7 +354,12 @@ export class Controls {
   };
 
   private readonly onButtonKeyDown = (e: KeyboardEvent): void => {
-    if (e.key !== 'Enter' || this.mode !== 'rev') return;
+    if (e.key !== 'Enter') return;
+    if (this.mode !== 'rev') {
+      // a key still held from before the pop repeats, and every repeat would be a click on "Pit stop"
+      if (e.repeat) e.preventDefault();
+      return;
+    }
     // in rev mode Enter is a hold, not a click
     e.preventDefault();
     if (e.repeat) return;
@@ -344,8 +367,9 @@ export class Controls {
     this.sync();
   };
 
-  private readonly onButtonKeyUp = (e: KeyboardEvent): void => {
-    if (e.key !== 'Enter' || !this.enterDown) return;
+  /** Enter is only a hold while the button has focus; its key-up may land somewhere else. */
+  private readonly onButtonBlur = (): void => {
+    if (!this.enterDown) return;
     this.enterDown = false;
     this.sync();
   };
@@ -366,12 +390,17 @@ export class Controls {
     // "Pit stop": on the focused button the browser turns Space into a click by itself
     if (focused === this.button) return;
     e.preventDefault();
-    if (e.repeat || this.mode !== 'pit') return;
+    if (e.repeat || this.mode !== 'pit' || performance.now() < this.pitKeyFrom) return;
     this.onPitStop?.();
   };
 
   private readonly onKeyUp = (e: KeyboardEvent): void => {
     this.onAnyRelease();
+    if (e.key === 'Enter' && this.enterDown) {
+      this.enterDown = false;
+      this.sync();
+      return;
+    }
     if (e.code !== 'Space' && e.key !== ' ') return;
     if (!this.spaceDown) return;
     this.spaceDown = false;

@@ -58,7 +58,8 @@ export const SMOKE = {
   IN_REFLECTION: true,
 };
 
-const MAX = 450;
+/** Size of the particle buffers: the biggest cap of any tier. */
+const MAX = Math.max(...Object.values(SMOKE.CAP));
 const FLOATS = 4;
 
 const VERTEX = /* glsl */ `
@@ -89,7 +90,8 @@ void main() {
   float worldY = aCenter.y + viewMatrix[1][0] * turned.x + viewMatrix[1][1] * turned.y;
   vSoft = worldY / ( 0.22 * aCenter.w );
   // cool under the floodlights, warmer low down on the pit side (-x), where the garages glow
-  float warm = smoothstep( 1.5, -8.0, aCenter.x ) * smoothstep( 5.0, 0.3, aCenter.y ) * uWarmth;
+  // (written as 1 - smoothstep: smoothstep with its edges the wrong way round is undefined in GLSL)
+  float warm = ( 1.0 - smoothstep( -8.0, 1.5, aCenter.x ) ) * ( 1.0 - smoothstep( 0.3, 5.0, aCenter.y ) ) * uWarmth;
   vTint = mix( uCool, uWarm, warm );
   vLight = normalize( ( viewMatrix * vec4( uKeyDir, 0.0 ) ).xyz );
 }
@@ -365,10 +367,7 @@ export class Smoke {
       looks[o] = turn[i] ?? 0;
       looks[o + 1] = (strength[i] ?? 0) * fadeIn * fadeOut;
     }
-    this.centers.clearUpdateRanges();
-    this.looks.clearUpdateRanges();
-    this.centers.addUpdateRange(0, n * FLOATS);
-    this.looks.addUpdateRange(0, n * FLOATS);
+    // the whole buffers go up (14 KB): an update range would be a new object every frame
     this.centers.needsUpdate = true;
     this.looks.needsUpdate = true;
     this.geometry.instanceCount = n;
