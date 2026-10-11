@@ -173,6 +173,13 @@ for (const view of VIEWS) {
       const height = target.firstScreenOnly ? view.viewport.height : await page.evaluate(() => document.documentElement.scrollHeight);
       // Chromium cannot make a picture taller than 16,384 px: a long page is taken at one pixel per CSS pixel
       const scale = height * view.deviceScaleFactor > 15000 ? 'css' : 'device';
+      // A full-page screenshot resizes the emulated screen, and Chromium then stops reporting a touch
+      // screen for a moment: /play would be drawn with its desktop button. What the page showed before
+      // the screenshot is pinned for the picture.
+      if (view.isMobile && target.name === 'play') {
+        const phone = await page.evaluate(() => matchMedia('(pointer: coarse) and (max-width: 900px)').matches);
+        if (phone) await page.addStyleTag({ content: '.launch__desktop{display:none!important}.launch__phone{display:block!important}' });
+      }
       const png = await page.screenshot({ fullPage: !target.firstScreenOnly, scale });
       const file = `${target.name}-${view.name}-${theme}.webp`;
       const saved = await saveWebp(png, path.join(OUT, file));
@@ -216,6 +223,24 @@ console.log('\noverflow at 360 px');
     if (!ok) failed = true;
   }
   await context.close();
+}
+
+// ---- /play on a phone ----------------------------------------------------------------------------------
+if (PAGES.some((target) => target.name === 'play') && existsSync(path.join(DIST, 'play', 'app', 'index.html'))) {
+  console.log('\n/play on a phone and on a computer');
+  for (const phone of [true, false]) {
+    const context = await newContext(
+      phone ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : { viewport: { width: 1440, height: 900 } },
+    );
+    const page = await context.newPage();
+    await page.goto(`${ORIGIN}/play`, { waitUntil: 'load' });
+    const notice = await page.getByText('Open this on a computer.').isVisible();
+    const button = await page.getByRole('link', { name: 'Launch the preview' }).isVisible();
+    const ok = phone ? notice && !button : button && !notice;
+    console.log(`  ${ok ? 'ok  ' : 'FAIL'}  ${phone ? 'phone' : 'computer'}: "Open this on a computer" ${notice ? 'shown' : 'hidden'}, the launch button ${button ? 'shown' : 'hidden'}`);
+    if (!ok) failed = true;
+    await context.close();
+  }
 }
 
 // ---- the JavaScript each page loads ------------------------------------------------------------------
