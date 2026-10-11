@@ -1,0 +1,23 @@
+# rustyAC
+
+> rustyAC is a from-scratch Rust rewrite of the racing simulator Assetto Corsa. Every system is checked against the original game's own code until the numbers match bit for bit. It is free software (GPL-3.0-or-later), very experimental, and Windows only. It ships no game files: you need your own copy of Assetto Corsa.
+
+Assetto Corsa is a trademark of its owners. rustyAC is not affiliated with them and is not endorsed by them.
+
+## Pages
+
+- [Home](https://rustyac.com/): what rustyAC is and what works today
+- [Download](https://rustyac.com/download): the latest Windows build, what you need, the first run, keys, common options, limits and the changelog
+- [Play in your browser](https://rustyac.com/play): the browser preview (the same physics as WebAssembly), what it needs and how your files are handled
+- [How it works](https://rustyac.com/how-it-works): decompile, map, port, prove; the oracle; what "bit-exact" means and what is not proven
+- [Progress](https://rustyac.com/progress): the roadmap by phase and every release
+- [Compatibility](https://rustyac.com/compatibility): which cars and tracks load, which are refused and why
+- [Devlog](https://rustyac.com/devlog): longer write-ups ([RSS](https://rustyac.com/devlog/rss.xml))
+- [FAQ](https://rustyac.com/faq): short answers
+
+## Source and reports
+
+- [Source code](https://github.com/thesupersupersigma/rustyAC)
+- [Releases](https://github.com/thesupersupersigma/rustyAC/releases)
+- [Port reports](https://github.com/thesupersupersigma/rustyAC/tree/master/docs/port): one technical report per ported system, each starting with a plain-English summary
+- [Licences](https://github.com/thesupersupersigma/rustyAC/blob/master/LICENSING.md)
