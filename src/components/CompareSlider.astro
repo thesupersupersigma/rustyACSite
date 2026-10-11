@@ -15,8 +15,12 @@ const PAIRS = [
   { id: 'laguna-seca', label: 'Laguna Seca', before: lagunaDebug, after: laguna },
 ];
 
-const WIDTHS = [480, 768, 1120, 1280];
-const SIZES = '(min-width: 1184px) 1120px, calc(100vw - 32px)';
+// The sources are 2560x1440. The slider is at most 1120 CSS px wide (the page width), so a 2x screen
+// wants 2240 device px: 2560 covers that, and the smaller widths cover phones and 1x screens.
+const WIDTHS = [640, 960, 1280, 1920, 2560];
+// below the page width the slider fills the window minus the gutters (16, 24 or 32 px a side)
+const SIZES =
+  '(min-width: 1184px) 1120px, (min-width: 1024px) calc(100vw - 64px), (min-width: 640px) calc(100vw - 48px), calc(100vw - 32px)';
 ---
 
 <div class="cmp" data-compare>

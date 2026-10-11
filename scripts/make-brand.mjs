@@ -1,9 +1,19 @@
-// Builds the checked-in brand files from the source logo and one screenshot:
-//   src/assets/logo-mark.png   the logo without its lettering (for the top bar, next to the text wordmark)
-//   public/favicon.png, public/apple-touch-icon.png
-//   public/og/rustyac-og.webp  1200x630 share image
-// Run with `npm run og` after changing the logo. The outputs are committed.
+// Builds the checked-in brand files. The outputs are committed.
+//
+//   npm run og                        public/og/rustyac-og.webp, the 1200x630 share image, from
+//                                     src/assets/logo-mark.png and a burnout screenshot
+//   node scripts/make-brand.mjs mark  also src/assets/logo-mark.png (the logo without its lettering),
+//                                     public/favicon.png and public/apple-touch-icon.png
+//
+// The share image prefers src/assets/screenshots/og_burnout.png (2400x1260: the car on the left, calm
+// tarmac along the bottom, where the wordmark goes) and falls back to the older
+// renderer_car_burnout.png with the wordmark on the left.
+//
+// The `mark` step masks the lettering out of the logo by pixel position, so it only fits the logo
+// file it was written for. After a new logo, make logo-mark.png by hand (or rewrite `logoMark`) and
+// run plain `npm run og`.
 import sharp from 'sharp';
+import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { inflateSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
@@ -13,7 +23,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const at = (p) => path.join(root, p);
 
 const LOGO = at('src/assets/logo.png');
-const SHOT = at('src/assets/screenshots/renderer_car_burnout.png');
+const MARK = at('src/assets/logo-mark.png');
+const SHOT_WIDE = at('src/assets/screenshots/og_burnout.png');
+const SHOT_OLD = at('src/assets/screenshots/renderer_car_burnout.png');
+const withMark = process.argv.includes('mark');
 
 // Pango (sharp's text renderer) reads TTF but not WOFF, so the npm fonts are unpacked first.
 // WOFF 1 is an sfnt whose tables are individually zlib-compressed.
@@ -82,67 +95,94 @@ function text(markup, font, fontfile, dpi) {
   return sharp({ text: { text: markup, font, fontfile, rgba: true, dpi } }).png().toBuffer();
 }
 
-const mark = await logoMark();
-await sharp(mark).resize({ height: 360 }).png({ compressionLevel: 9 }).toFile(at('src/assets/logo-mark.png'));
+if (withMark) {
+  const fresh = await logoMark();
+  await sharp(fresh).resize({ height: 360 }).png({ compressionLevel: 9 }).toFile(MARK);
 
-const square = (size) =>
-  sharp(mark)
-    .resize({ width: Math.round(size * 0.9), height: Math.round(size * 0.9), fit: 'contain', background: '#0000' })
-    .extend({
-      top: Math.round(size * 0.05),
-      bottom: size - Math.round(size * 0.9) - Math.round(size * 0.05),
-      left: Math.round(size * 0.05),
-      right: size - Math.round(size * 0.9) - Math.round(size * 0.05),
-      background: '#0000',
-    });
-await square(96).png().toFile(at('public/favicon.png'));
-await square(180).flatten({ background: '#0E0E0E' }).png().toFile(at('public/apple-touch-icon.png'));
+  const square = (size) =>
+    sharp(fresh)
+      .resize({ width: Math.round(size * 0.9), height: Math.round(size * 0.9), fit: 'contain', background: '#0000' })
+      .extend({
+        top: Math.round(size * 0.05),
+        bottom: size - Math.round(size * 0.9) - Math.round(size * 0.05),
+        left: Math.round(size * 0.05),
+        right: size - Math.round(size * 0.9) - Math.round(size * 0.05),
+        background: '#0000',
+      });
+  await square(96).png().toFile(at('public/favicon.png'));
+  await square(180).flatten({ background: '#0E0E0E' }).png().toFile(at('public/apple-touch-icon.png'));
+  console.log('logo mark and icons written');
+}
 
-// Share image: the screenshot darkened toward the left, the mark, the wordmark and one line.
+// ---- share image ----------------------------------------------------------------------------------
 await mkdir(at('public/og'), { recursive: true });
 const W = 1200;
 const H = 630;
-const shade = Buffer.from(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
-    <defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="0">
-      <stop offset="0" stop-color="#0E0E0E" stop-opacity="0.96"/>
-      <stop offset="0.55" stop-color="#0E0E0E" stop-opacity="0.82"/>
-      <stop offset="1" stop-color="#0E0E0E" stop-opacity="0.45"/>
-    </linearGradient></defs>
-    <rect width="${W}" height="${H}" fill="url(#g)"/>
-    <rect x="72" y="452" width="96" height="4" fill="#D2581F"/>
-  </svg>`,
-);
-const wordmark = await text(
-  '<span foreground="#F5F5F5">rusty</span><span foreground="#D2581F">AC</span>',
-  'Syne Bold',
-  SYNE,
-  560,
-);
-const line = await text(
-  '<span foreground="#F5F5F5">Assetto Corsa, rebuilt from scratch in Rust.</span>',
-  'Syne Bold',
-  SYNE,
-  190,
-);
-const sub = await text(
-  '<span foreground="#9A9A9A">rustyac.com</span>',
-  'JetBrains Mono',
-  MONO,
-  118,
-);
-const markSmall = await sharp(mark).resize({ height: 150 }).toBuffer();
+const mark = await readFile(MARK);
+const WORDMARK = '<span foreground="#F5F5F5">rusty</span><span foreground="#D2581F">AC</span>';
+const LINE = '<span foreground="#F5F5F5">Assetto Corsa, rebuilt from scratch in Rust.</span>';
+const sub = await text('<span foreground="#9A9A9A">rustyac.com</span>', 'JetBrains Mono', MONO, 118);
+const widthOf = async (buffer) => (await sharp(buffer).metadata()).width ?? 0;
+const heightOf = async (buffer) => (await sharp(buffer).metadata()).height ?? 0;
 
-await sharp(SHOT)
-  .resize(W, H, { fit: 'cover', position: 'centre' })
-  .composite([
-    { input: shade, left: 0, top: 0 },
-    { input: markSmall, left: 72, top: 70 },
-    { input: wordmark, left: 72, top: 262 },
-    { input: line, left: 72, top: 486 },
-    { input: sub, left: 72, top: 548 },
-  ])
-  .webp({ quality: 82 })
-  .toFile(at('public/og/rustyac-og.webp'));
-
-console.log('brand files written');
+if (existsSync(SHOT_WIDE)) {
+  // The 2400x1260 burnout: car, smoke and gantry fill the top; the tarmac below them carries the text.
+  const shade = Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+      <defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0.52" stop-color="#0E0E0E" stop-opacity="0"/>
+        <stop offset="0.72" stop-color="#0E0E0E" stop-opacity="0.82"/>
+        <stop offset="1" stop-color="#0E0E0E" stop-opacity="0.96"/>
+      </linearGradient></defs>
+      <rect width="${W}" height="${H}" fill="url(#g)"/>
+      <rect x="72" y="548" width="96" height="4" fill="#D2581F"/>
+    </svg>`,
+  );
+  const wordmark = await text(WORDMARK, 'Syne Bold', SYNE, 400);
+  const line = await text(LINE, 'Syne Bold', SYNE, 170);
+  const markSmall = await sharp(mark).resize({ height: 84 }).toBuffer();
+  await sharp(SHOT_WIDE)
+    .resize(W, H, { fit: 'cover', position: 'centre' })
+    .composite([
+      { input: shade, left: 0, top: 0 },
+      { input: markSmall, left: 72, top: 446 },
+      {
+        input: wordmark,
+        left: 72 + (await widthOf(markSmall)) + 22,
+        top: 446 + Math.round((84 - (await heightOf(wordmark))) / 2) + 4,
+      },
+      { input: line, left: 72, top: 568 },
+      { input: sub, left: W - 72 - (await widthOf(sub)), top: 576 },
+    ])
+    .webp({ quality: 84 })
+    .toFile(at('public/og/rustyac-og.webp'));
+  console.log('share image written from og_burnout.png');
+} else {
+  // The older 1152x648 screenshot: darkened toward the left, the mark, the wordmark and one line.
+  const shade = Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+      <defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="0">
+        <stop offset="0" stop-color="#0E0E0E" stop-opacity="0.96"/>
+        <stop offset="0.55" stop-color="#0E0E0E" stop-opacity="0.82"/>
+        <stop offset="1" stop-color="#0E0E0E" stop-opacity="0.45"/>
+      </linearGradient></defs>
+      <rect width="${W}" height="${H}" fill="url(#g)"/>
+      <rect x="72" y="452" width="96" height="4" fill="#D2581F"/>
+    </svg>`,
+  );
+  const wordmark = await text(WORDMARK, 'Syne Bold', SYNE, 560);
+  const line = await text(LINE, 'Syne Bold', SYNE, 190);
+  const markSmall = await sharp(mark).resize({ height: 150 }).toBuffer();
+  await sharp(SHOT_OLD)
+    .resize(W, H, { fit: 'cover', position: 'centre' })
+    .composite([
+      { input: shade, left: 0, top: 0 },
+      { input: markSmall, left: 72, top: 70 },
+      { input: wordmark, left: 72, top: 262 },
+      { input: line, left: 72, top: 486 },
+      { input: sub, left: 72, top: 548 },
+    ])
+    .webp({ quality: 82 })
+    .toFile(at('public/og/rustyac-og.webp'));
+  console.log('share image written from renderer_car_burnout.png');
+}

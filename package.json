@@ -13,6 +13,8 @@
     "check": "astro check",
     "test": "vitest run",
     "og": "node scripts/make-brand.mjs",
+    "screenshots": "node scripts/use-screenshots.mjs",
+    "bench": "node scripts/bench.mjs",
     "shots": "node scripts/shots.mjs"
   },
   "dependencies": {
