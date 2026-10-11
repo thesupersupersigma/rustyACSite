@@ -36,10 +36,13 @@ export class LiveSound {
    */
   async start(onProgress: (loaded: number, total: number) => void): Promise<void> {
     const manifest = await this.loader.init();
+    if (this.disposed) return;
     const graph = new SoundGraph(this.ctx, manifest, makeRandom((Date.now() & 0xffff) + 1));
     this.graph = graph;
     this.total = manifest.clips.length;
 
+    const isEngine = (group: string) => group === 'engine' || group === 'limiter';
+    const engineIds = manifest.clips.filter((c) => isEngine(c.group)).map((c) => c.id);
     const fetchAll = async (ids: string[]) => {
       await Promise.all(
         ids.map(async (id) => {
@@ -47,21 +50,21 @@ export class LiveSound {
           if (this.disposed) return;
           graph.addClip(clip);
           this.loaded = graph.clipCount;
-          onProgress(this.loaded, this.total);
+          // the button's ring is about the engine: sound starts when that has arrived
+          if (!this.ready) onProgress(Math.min(this.loaded, engineIds.length), engineIds.length);
+          // a loop that arrives after the engine started (the tyres) joins in at once
+          else graph.startLoops(this.ctx.currentTime + 0.02);
         }),
       );
     };
-    const isEngine = (group: string) => group === 'engine' || group === 'limiter';
-    await fetchAll(manifest.clips.filter((c) => isEngine(c.group)).map((c) => c.id));
+    await fetchAll(engineIds);
     if (this.disposed) return;
     graph.startLoops(this.ctx.currentTime + 0.02);
     this.ready = true;
 
-    void fetchAll(manifest.clips.filter((c) => !isEngine(c.group)).map((c) => c.id))
-      .then(() => {
-        if (!this.disposed) graph.startLoops(this.ctx.currentTime + 0.02);
-      })
-      .catch((err: unknown) => console.warn('[f2004] some sounds could not be loaded', err));
+    void fetchAll(manifest.clips.filter((c) => !isEngine(c.group)).map((c) => c.id)).catch((err: unknown) =>
+      console.warn('[f2004] some sounds could not be loaded', err),
+    );
   }
 
   frame(dt: number, input: SoundInput, space: SoundSpace): void {
@@ -70,6 +73,10 @@ export class LiveSound {
 
   event(type: string, wheel: number, rpm: number, space: SoundSpace): void {
     this.graph?.event(this.ctx.currentTime, type, wheel, rpm, space);
+  }
+
+  level(): number {
+    return this.graph?.level() ?? 0;
   }
 
   setAudible(on: boolean): void {

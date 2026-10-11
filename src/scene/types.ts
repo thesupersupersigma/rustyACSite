@@ -131,6 +131,8 @@ export interface SoundHooks {
   state(): SoundState;
   /** What a click on the speaker button does. Turning sound on has to happen inside a click or key press. */
   toggle(): void;
+  /** How loud the output is right now (RMS, 0 to 1); 0 while nothing is heard. For checks. */
+  level(): number;
   /** Renders the scripted run without playing it. Takes over the burnout's clock while it records. */
   renderRun(): Promise<SoundRun>;
 }

@@ -54,6 +54,13 @@ function createContext(): AudioContext {
   if (!Ctor) throw new Error('this browser has no Web Audio');
   try {
     // the clips are 48 kHz: asking for the same rate saves a resampling of every one of them
+    // iPhones and iPads: the visitor asked for sound, so play it even with the mute switch on
+    const session = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
+    if (session) session.type = 'playback';
+  } catch {
+    // not there, or not allowed: the default is fine
+  }
+  try {
     return new Ctor({ sampleRate: 48000, latencyHint: 'interactive' });
   } catch {
     return new Ctor();
@@ -103,6 +110,7 @@ export class Sound {
     this.hooks = {
       state: () => this.state,
       toggle: this.toggle,
+      level: () => (this.audible ? (this.live?.level() ?? 0) : 0),
       renderRun: async () => {
         const { renderRun } = await import('./offline');
         return renderRun({
@@ -143,7 +151,8 @@ export class Sound {
   /** Once per rendered frame. */
   update(dt: number): void {
     const live = this.live;
-    if (!live || !this.audible) return;
+    // also while faded out (the stage is leaving the screen), so the mix is current when it fades back in
+    if (!live?.ready || this.state !== 'on') return;
     const { engine } = this.deps;
     const input = this.input;
     input.rpm = engine.rpm;
@@ -220,14 +229,18 @@ export class Sound {
   }
 
   private fail(err: unknown): void {
+    if (this.disposed) return;
     console.error('[f2004] sound could not start', err);
+    const wanted = this.wanted;
     this.live?.dispose();
     this.live = undefined;
     this.starting = undefined;
     this.wanted = false;
+    // do not come back "armed" on every later visit in a browser that cannot do it
+    remember(false);
     this.setState('off');
     this.apply();
-    this.deps.controls.announce('Sound could not start');
+    if (wanted) this.deps.controls.announce('Sound could not start');
   }
 
   private setState(state: SoundState): void {
@@ -243,12 +256,14 @@ export class Sound {
   /** The rev button (or Space) went down: with sound remembered from last time, that starts it. */
   private readonly onPress = (): void => {
     if (this.state === 'armed') this.turnOn();
+    else this.nudge();
   };
 
   /** A context the browser stopped (or never let start) gets another go on every gesture. */
   private readonly nudge = (): void => {
     const ctx = this.ctx;
-    if (ctx && this.audible && ctx.state !== 'running') void ctx.resume().catch(ignore);
+    // (also while loading: a touch that started the load was not a gesture yet when it went down)
+    if (ctx && (this.audible || this.state === 'loading') && ctx.state !== 'running') void ctx.resume().catch(ignore);
   };
 
   private readonly refresh = (): void => {

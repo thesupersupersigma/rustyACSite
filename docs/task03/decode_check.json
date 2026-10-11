@@ -1,6 +1,6 @@
 [
  {
-  "browser": "Chromium (Playwright build, no proprietary codecs)",
+  "browser": "Chromium (Playwright build)",
   "started": true,
   "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36",
   "rows": [
@@ -1518,6 +1518,6 @@
  {
   "browser": "WebKit (Playwright build for Windows, not Safari)",
   "started": true,
-  "error": "page.evaluate: TypeError: undefined is not a constructor (evaluating 'new Offline(2, RATE, RATE)')"
+  "error": "page.evaluate: ReferenceError: Can't find variable: OfflineAudioContext"
  }
 ]

@@ -145,6 +145,9 @@ const waitOn = (page) => page.waitForFunction(() => window.__f2004.sound.state()
   check('no visit: no audio file requested', audio().length === 0, `${audio().length} requests`);
   check('no visit: no AudioContext created', (await contexts()).length === 0, `${(await contexts()).length} contexts`);
   check('no visit: no extra script fetched by revving and scrolling', scripts().length === before, scripts().slice(before).join(', '));
+  const lazy = () => scripts().filter((f) => /\/(live|graph|offline)\./.test(f));
+  check('no visit: the sound chunks were never fetched', lazy().length === 0, lazy().join(', '));
+  check('no visit: nothing is heard', (await page.evaluate(() => window.__f2004.sound.level())) === 0);
   console.log(`      scripts on the homepage: ${scripts().join(', ')}`);
 
   // ---- 2. turning it on -------------------------------------------------------------------------------
@@ -159,12 +162,16 @@ const waitOn = (page) => page.waitForFunction(() => window.__f2004.sound.state()
   const firstClip = files.findIndex((f) => !f.includes('engine_') && !f.includes('limiter') && !f.includes('manifest') && !f.includes('backfire'));
   const lastEngine = files.findLastIndex((f) => f.includes('engine_') || f.includes('limiter'));
   check('on: the engine clips are asked for before the rest', firstClip > lastEngine, files.map((f) => f.replace('/audio/', '')).join(' '));
+  check('on: the sound chunks were fetched on the click', lazy().length >= 2, lazy().join(', '));
+  const idle = await page.evaluate(() => window.__f2004.sound.level());
+  check('on: the idling engine is heard', idle > 0.005 && idle < 0.2, `RMS ${idle.toFixed(4)}`);
   check('on: the speaker says "Sound on", pressed', (await speaker(page).getAttribute('aria-label')) === 'Sound on' && (await speaker(page).getAttribute('aria-pressed')) === 'true');
   check('on: the mouse click did not leave the focus on the speaker', await page.evaluate(() => document.activeElement !== document.querySelector('.rev__sound')));
   check('on: the choice is stored', (await page.evaluate(() => localStorage.getItem('rustyac:sound'))) === 'on');
 
   // ---- 3. the stage scrolls away and comes back ----------------------------------------------------------
   await gotoProgress(page, 0.95, 900);
+  check('scrolled away: nothing is heard', (await page.evaluate(() => window.__f2004.sound.level())) === 0);
   check('scrolled away: the context is suspended', JSON.stringify(await contexts()) === '["suspended"]', JSON.stringify(await contexts()));
   await gotoProgress(page, 0.5, 900);
   check('scrolled back: the context runs again', JSON.stringify(await contexts()) === '["running"]', JSON.stringify(await contexts()));
@@ -187,6 +194,10 @@ const waitOn = (page) => page.waitForFunction(() => window.__f2004.sound.state()
   const box = await page.locator('.rev__btn').boundingBox();
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
+  await page.waitForFunction(() => window.__f2004.engine.limiter, null, { timeout: 20000 });
+  await page.waitForTimeout(600);
+  const flatOut = await page.evaluate(() => window.__f2004.sound.level());
+  check('flat out: much louder than idle', flatOut > idle * 2.5, `RMS ${flatOut.toFixed(4)} against ${idle.toFixed(4)}`);
   await page.waitForFunction(() => window.__f2004.engine.state === 'popped', null, { timeout: 20000 });
   await page.mouse.up();
   await page.waitForTimeout(1200);

@@ -143,7 +143,7 @@ async function checkInPage() {
 }
 
 const targets = [
-  { name: 'Chromium (Playwright build, no proprietary codecs)', launch: () => chromium.launch({ headless: true }) },
+  { name: 'Chromium (Playwright build)', launch: () => chromium.launch({ headless: true }) },
   { name: 'Google Chrome (installed)', launch: () => chromium.launch({ headless: true, channel: 'chrome' }) },
   { name: 'Microsoft Edge (installed)', launch: () => chromium.launch({ headless: true, channel: 'msedge' }) },
   { name: 'Firefox (Playwright build)', launch: () => firefox.launch({ headless: true }) },

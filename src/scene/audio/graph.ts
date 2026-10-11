@@ -68,9 +68,12 @@ export class SoundGraph {
   private readonly fxBus: GainNode;
   private readonly distance: GainNode;
   private readonly fade: GainNode;
+  private readonly meter: AnalyserNode;
+  private readonly meterData: Float32Array<ArrayBuffer>;
   private readonly nodes: AudioNode[] = [];
   /** The last value each parameter was sent toward, so a frame that changes nothing schedules nothing. */
   private readonly targets = new Map<AudioParam, number>();
+  private lastPop = -1;
 
   constructor(ctx: BaseAudioContext, manifest: AudioManifest, random: () => number) {
     this.ctx = ctx;
@@ -104,7 +107,12 @@ export class SoundGraph {
     ceiling.curve = curve;
     this.fade = gain(0);
     master.connect(compressor).connect(trim).connect(ceiling).connect(this.fade).connect(ctx.destination);
-    this.nodes.push(compressor, ceiling);
+    // a tap for the checks: how loud is what goes to the speakers
+    this.meter = ctx.createAnalyser();
+    this.meter.fftSize = 2048;
+    this.meterData = new Float32Array(this.meter.fftSize);
+    this.fade.connect(this.meter);
+    this.nodes.push(compressor, ceiling, this.meter);
 
     // ---- space ---------------------------------------------------------------------------------
     this.distance = gain(1);
@@ -214,11 +222,14 @@ export class SoundGraph {
   event(t: number, type: string, wheel: number, rpm: number, space: SoundSpace): void {
     switch (type) {
       case 'throttle:off': {
+        // the pop closes the throttle too; engine bangs under the burst would only muddy it
+        if (this.lastPop >= 0 && t - this.lastPop < 0.05) break;
         const shots = planBackfires(rpm, this.random);
         for (const shot of shots) this.backfire(t, shot);
         break;
       }
       case 'pop': {
+        this.lastPop = t;
         // one burst per rear tyre: the one further left on screen goes left
         const left = (space.wheels[2] ?? 0) <= (space.wheels[3] ?? 0) ? 0 : 1;
         const level = dbToGain(AUDIO.BURST_DB);
@@ -253,6 +264,14 @@ export class SoundGraph {
     const param = this.fade.gain;
     param.cancelScheduledValues(t);
     param.setTargetAtTime(on ? 1 : 0, t, timeConstant(AUDIO.FADE_SECONDS));
+  }
+
+  /** RMS of the last few hundredths of a second of output, 0 to 1. */
+  level(): number {
+    this.meter.getFloatTimeDomainData(this.meterData);
+    let sum = 0;
+    for (let i = 0; i < this.meterData.length; i++) sum += (this.meterData[i] as number) ** 2;
+    return Math.sqrt(sum / this.meterData.length);
   }
 
   /** Full level from the first sample (the offline render). */

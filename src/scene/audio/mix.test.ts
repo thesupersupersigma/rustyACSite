@@ -254,6 +254,11 @@ describe('backfires', () => {
     const times = bounce(makeRandom(11));
     // 100 cuts at a few percent each
     expect(times.length).toBeLessThan(15);
+    // ...but they do happen: 20 such runs are 2000 cuts
+    let total = 0;
+    for (let seed = 1; seed <= 20; seed++) total += bounce(makeRandom(seed)).length;
+    expect(total).toBeGreaterThan(20);
+    expect(total).toBeLessThan(2000 * AUDIO.BACKFIRE_LIMITER_CHANCE * 2);
     expect(bounce(() => 0, false)).toEqual([]);
   });
 });
