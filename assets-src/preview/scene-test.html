@@ -1,0 +1,72 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000;overflow:hidden}</style>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/"}}</script>
+</head><body><script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
+const q=new URLSearchParams(location.search);
+const W=1280,H=720;
+const r=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
+r.setSize(W,H); r.toneMapping=THREE.ACESFilmicToneMapping; r.toneMappingExposure=+(q.get('exp')||1.0);
+document.body.appendChild(r.domElement);
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x05070d); scene.fog=new THREE.FogExp2(0x05070d,0.012);
+const cam=new THREE.PerspectiveCamera(+(q.get('fov')||38),W/H,0.05,400);
+const cp=(q.get('cam')||'5.2,1.6,-5.5').split(',').map(Number), ct=(q.get('look')||'0,0.45,0.3').split(',').map(Number);
+cam.position.set(...cp); cam.lookAt(...ct);
+const tl=new THREE.TextureLoader();
+const tex=(f,srgb)=>{const t=tl.load('textures/'+f); if(srgb) t.colorSpace=THREE.SRGBColorSpace; t.flipY=false; return t;};
+const info=await (await fetch('models/night_track.json')).json();
+const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+const trk=await loader.loadAsync('models/night_track.glb');
+const albedo=tex('asphalt_albedo.webp',true); albedo.wrapS=albedo.wrapT=THREE.RepeatWrapping;
+const rough=tex('asphalt_rough.webp',false); rough.wrapS=rough.wrapT=THREE.RepeatWrapping;
+const puddle=tex('puddle_mask.webp',false); puddle.wrapS=puddle.wrapT=THREE.RepeatWrapping;
+const wet=q.get('wet')!=='0';
+trk.scene.traverse(o=>{
+  if(!o.isMesh) return;
+  const n=o.name, base=n.replace(/_\d+$/,'');
+  const key=Object.keys(info.lightmaps).find(k=>n.startsWith(k));
+  if(key){
+    const L=info.lightmaps[key]; const lm=tex(L.file,true); lm.channel=L.uv;
+    const mats=Array.isArray(o.material)?o.material:[o.material];
+    mats.forEach(m=>{m.lightMap=lm; m.lightMapIntensity=L.scale*Math.PI; m.envMapIntensity=0.0;
+      if(key==='trk_ground' && /asphalt|pitlane/.test(m.name)){
+        albedo.repeat.set(3,3); rough.repeat.set(3,3); m.map=albedo; m.color.setRGB(0.10,0.10,0.105); m.roughness=wet?0.18:0.7; m.roughnessMap=rough; m.metalness=0; m.envMapIntensity=wet?+(q.get('envg')||0.5):0.1;
+        if(wet){ m.onBeforeCompile=s=>{ s.uniforms.puddle={value:puddle};
+          s.fragmentShader=s.fragmentShader.replace('#include <roughnessmap_fragment>',`#include <roughnessmap_fragment>
+          float pd=texture2D(puddle, vMapUv*0.35).r; roughnessFactor=mix(roughnessFactor*0.9,0.03,pd); diffuseColor.rgb*=mix(1.0,0.6,pd);`)
+          .replace('void main() {','uniform sampler2D puddle;\nvoid main() {'); }; }
+      }});
+  }
+  if(n.startsWith('trk_garage_glow')) o.material=new THREE.MeshBasicMaterial({color:new THREE.Color(1.0,0.66,0.38).multiplyScalar(+(q.get('glow')||0.9))});
+  if(n.startsWith('trk_flood_panels')) o.material=new THREE.MeshBasicMaterial({color:new THREE.Color(0.85,0.9,1).multiplyScalar(6)});
+  if(n.startsWith('startlight')) o.material=new THREE.MeshBasicMaterial({color:0x220000});
+});
+scene.add(trk.scene);
+// env map for reflections: render the track (no car) from just above the car
+const pm=new THREE.PMREMGenerator(r);
+const cubeRT=new THREE.WebGLCubeRenderTarget(256,{type:THREE.HalfFloatType});
+const cc=new THREE.CubeCamera(0.1,300,cubeRT); cc.position.set(0,0.6,0); scene.add(cc); cc.update(r,scene);
+const env=pm.fromCubemap(cubeRT.texture).texture;
+scene.environment=env;
+trk.scene.traverse(o=>{ if(o.isMesh && o.material.envMapIntensity===undefined) return; });
+// car
+const car=(await loader.loadAsync('models/f2004.glb')).scene;
+car.traverse(o=>{ if(o.isMesh){ o.material.envMapIntensity=+(q.get('envcar')||1.6); }});
+scene.add(car);
+// key light: the floodlight aimed at the grid slot
+const f=info.floodlights.find(x=>x.name==='flood_5')||info.floodlights[0];
+const key=new THREE.SpotLight(new THREE.Color(...f.color), +(q.get('key')||900), 60, THREE.MathUtils.degToRad(30), 0.6, 2);
+key.position.set(...f.pos); key.target.position.set(0,0,0); scene.add(key,key.target);
+const rim=new THREE.SpotLight(0xffb070, 120, 30, 0.8, 0.8, 2); rim.position.set(-8,3,4); rim.target.position.set(0,0.4,0); scene.add(rim,rim.target);
+// fake contact shadow
+const cs=new THREE.Mesh(new THREE.PlaneGeometry(2.2,5.0),new THREE.MeshBasicMaterial({color:0,transparent:true,opacity:0.55,depthWrite:false}));
+cs.rotation.x=-Math.PI/2; cs.position.set(0,0.008,0.2); scene.add(cs);
+const comp=new EffectComposer(r); comp.addPass(new RenderPass(scene,cam));
+comp.addPass(new UnrealBloomPass(new THREE.Vector2(W,H),+(q.get('bloom')||0.35),0.4,0.9)); comp.addPass(new OutputPass());
+comp.render(); window.DONE=true;
+</script></body></html>

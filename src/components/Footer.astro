@@ -1,0 +1,70 @@
+---
+import { Image } from 'astro:assets';
+import logo from '../assets/logo.png';
+import { LINKS, TRADEMARK_LINE } from '../lib/site';
+---
+
+<footer class="foot">
+  <div class="wrap foot__in">
+    <div class="foot__top">
+      <a href="/" class="foot__logo" aria-label="rustyAC home">
+        <Image src={logo} alt="rustyAC" width={150} densities={[1, 2]} loading="lazy" />
+      </a>
+      <ul class="foot__links">
+        <li><a href={LINKS.github} rel="noopener">GitHub</a></li>
+        <li><a href={LINKS.discord} rel="noopener">Discord</a></li>
+        <li><a href={LINKS.releases} rel="noopener">Releases</a></li>
+        <li><a href={LINKS.licences} rel="noopener">Licences</a></li>
+      </ul>
+    </div>
+    <div class="foot__small">
+      <p>{TRADEMARK_LINE}</p>
+      <p>put ai disclaimer here</p>
+      <p>© 2026 thesupersupersigma</p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .foot {
+    border-top: 1px solid var(--line);
+    padding-block: 40px 48px;
+  }
+
+  .foot__in {
+    display: grid;
+    gap: 28px;
+  }
+
+  .foot__top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px 32px;
+  }
+
+  .foot__logo {
+    display: block;
+    /* the PNG has transparent padding on its left side */
+    margin-left: calc(-1 * min(29px, var(--gutter)));
+  }
+
+  .foot__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 24px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.9375rem;
+  }
+
+  .foot__small {
+    display: grid;
+    gap: 6px;
+    color: var(--muted);
+    font-size: var(--step--1);
+    max-width: 46rem;
+  }
+</style>

@@ -1,0 +1,414 @@
+---
+import Base from '../layouts/Base.astro';
+import Icon from '../components/Icon.astro';
+import F2004Scene from '../components/F2004Scene.astro';
+import CompareSlider from '../components/CompareSlider.astro';
+import { LINKS, SITE_URL } from '../lib/site';
+import { formatReleaseDate, getLatestRelease } from '../lib/release';
+import { STATUS_LABEL, STATUS_ROWS } from '../data/status';
+import { PROOF_FOOTNOTE, PROOF_ROWS } from '../data/proofs';
+
+const release = await getLatestRelease();
+
+const description =
+  'rustyAC is a from-scratch Rust rewrite of Assetto Corsa. Every system is checked against the original game until the numbers match bit for bit.';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'rustyAC',
+  url: SITE_URL,
+  description,
+  operatingSystem: 'Windows',
+  applicationCategory: 'GameApplication',
+  softwareVersion: release.tag.replace(/^v/, ''),
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  license: 'https://spdx.org/licenses/GPL-3.0-or-later.html',
+  codeRepository: LINKS.github,
+  author: { '@type': 'Person', name: 'thesupersupersigma' },
+};
+
+const STEPS = [
+  {
+    title: 'Decompile.',
+    text: 'Assetto Corsa ships acs.exe with its debug symbols (acs.pdb, 66 MB), so the decompiler shows the real function and class names.',
+  },
+  {
+    title: 'Port.',
+    text: 'Each system is mapped into a written report, then rewritten in Rust, one to one.',
+  },
+  {
+    title: 'Prove.',
+    text: "A test tool loads the real acs.exe into its own process, calls the game's own functions by address and feeds both the same inputs. Every number has to match, down to the last bit.",
+  },
+];
+
+// Fixed-width columns for the proof log: name, right-aligned count, unit, result.
+const whatW = Math.max(...PROOF_ROWS.map((r) => r.what.length)) + 3;
+const countW = Math.max(...PROOF_ROWS.map((r) => r.count.length));
+const unitW = Math.max(...PROOF_ROWS.map((r) => r.unit.length)) + 2;
+const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+// Built as one string: inside <pre> every space and line break of the template would show.
+const proofHtml = PROOF_ROWS.map(
+  (r) =>
+    `${esc(r.what.padEnd(whatW))}<span class="proof__n">${esc(r.count.padStart(countW))}</span> ` +
+    `${esc(r.unit.padEnd(unitW))}<span class="proof__ok">${esc(r.result)}</span>`,
+).join('\n');
+---
+
+<Base description={description} jsonLd={jsonLd}>
+  <section class="hero wrap">
+    <p class="eyebrow hero__meta">{release.tag} · experimental · Windows</p>
+    <h1>Assetto Corsa, rebuilt from scratch in Rust.</h1>
+    <p class="lede">
+      Every system is checked against the original game until the numbers match bit for bit. Physics, sound and the
+      renderer are already ported.
+    </p>
+    <div class="btn-row">
+      <a class="btn btn--primary" href="/download"><Icon name="download" />Download for Windows</a>
+      <a class="btn" href="/play">Try in your browser</a>
+      <a class="btn" href={LINKS.github} rel="noopener"><Icon name="github" />GitHub</a>
+    </div>
+    <p class="hero__note muted">You need your own copy of Assetto Corsa. rustyAC ships no game files.</p>
+    <div class="hero__cue" aria-hidden="true"><span></span></div>
+  </section>
+
+  <F2004Scene />
+
+  <section class="section wrap" id="status">
+    <div class="section-head">
+      <h2>What works today</h2>
+    </div>
+    <ul class="status">
+      {
+        STATUS_ROWS.map((row) => (
+          <li class="status__row card">
+            <span class={`dot dot--${row.status}`} aria-hidden="true" />
+            <div class="status__body">
+              <h3>{row.area}</h3>
+              <p class="muted">{row.detail}</p>
+            </div>
+            <span class="status__state mono">{STATUS_LABEL[row.status]}</span>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section class="section wrap" id="bit-exact">
+    <div class="section-head">
+      <h2>Bit-exact in 3 steps</h2>
+    </div>
+    <ol class="steps">
+      {
+        STEPS.map((step, i) => (
+          <li class="steps__item">
+            <span class="steps__n mono" aria-hidden="true">
+              0{i + 1}
+            </span>
+            <h3>{step.title}</h3>
+            <p class="muted">{step.text}</p>
+          </li>
+        ))
+      }
+    </ol>
+    <div class="proof card">
+      <pre class="proof__log mono" tabindex="0" role="region" aria-label="Proof log" set:html={proofHtml} />
+    </div>
+    <p class="proof__note muted">{PROOF_FOOTNOTE}</p>
+  </section>
+
+  <section class="section wrap" id="renderer">
+    <div class="section-head">
+      <h2>From debug view to AC's real renderer</h2>
+    </div>
+    <CompareSlider />
+    <p class="caption muted">
+      Both pictures are rustyAC. Left: the early debug view. Right: Assetto Corsa's own shaders, running in rustyAC.
+    </p>
+  </section>
+
+  <section class="section wrap" id="get">
+    <div class="get">
+      <article class="get__card card">
+        <p class="eyebrow">Download</p>
+        <h2 class="get__title">{release.name}</h2>
+        <p class="mono muted get__date">
+          <time datetime={release.date}>{formatReleaseDate(release.date)}</time>
+        </p>
+        <p class="muted">Windows 10 or 11 · your own Assetto Corsa install</p>
+        <div class="get__actions">
+          <a class="btn btn--primary" href="/download"><Icon name="download" />Download</a>
+          <a class="get__more" href={LINKS.releases} rel="noopener">All releases</a>
+        </div>
+      </article>
+      <article class="get__card card">
+        <p class="eyebrow">Play</p>
+        <h2 class="get__title">In your browser</h2>
+        <p class="muted">
+          Try it in your browser: the same physics compiled to WebAssembly. You open your own Assetto Corsa folder;
+          nothing is uploaded. Chrome or Edge.
+        </p>
+        <div class="get__actions">
+          <a class="btn" href="/play">Try in your browser<Icon name="arrow" /></a>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="section wrap" id="discord">
+    <div class="band card">
+      <p class="band__text">It's very experimental. So is the Discord.</p>
+      <a class="btn" href={LINKS.discord} rel="noopener"><Icon name="discord" />Join the Discord</a>
+    </div>
+  </section>
+</Base>
+
+<style>
+  /* ---------- hero ---------- */
+  .hero {
+    position: relative;
+    display: grid;
+    align-content: center;
+    justify-items: start;
+    gap: 24px;
+    min-height: calc(100vh - var(--bar-h));
+    min-height: calc(100svh - var(--bar-h));
+    padding-block: 72px 112px;
+  }
+
+  .hero h1 {
+    max-width: 14ch;
+  }
+
+  .hero__note {
+    font-size: var(--step--1);
+    margin-top: -4px;
+  }
+
+  .hero__cue {
+    position: absolute;
+    left: var(--gutter);
+    bottom: 32px;
+    width: 1px;
+    height: 48px;
+    background: var(--line);
+    overflow: hidden;
+  }
+
+  .hero__cue span {
+    display: block;
+    width: 100%;
+    height: 40%;
+    background: var(--muted);
+    animation: cue 2.2s var(--ease) infinite;
+  }
+
+  @keyframes cue {
+    from {
+      transform: translateY(-100%);
+    }
+    to {
+      transform: translateY(250%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero__cue span {
+      animation: none;
+    }
+  }
+
+  /* ---------- what works today ---------- */
+  .status {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .status__row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      'dot body'
+      '. state';
+    gap: 10px 14px;
+    padding: 18px 20px;
+  }
+
+  .status__body {
+    grid-area: body;
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .status__body p {
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  .status__state {
+    grid-area: state;
+    align-self: end;
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+
+  .dot {
+    grid-area: dot;
+    width: 10px;
+    height: 10px;
+    margin-top: 7px;
+    border-radius: 50%;
+    border: 1.5px solid var(--line);
+  }
+
+  .dot--done {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .dot--mostly {
+    border-color: var(--accent);
+  }
+
+  .dot--preview {
+    background: var(--muted);
+    border-color: var(--muted);
+  }
+
+  .dot--planned {
+    background: var(--line);
+  }
+
+  /* ---------- bit-exact ---------- */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    gap: 28px 40px;
+    margin: 0 0 40px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .steps__item {
+    display: grid;
+    align-content: start;
+    gap: 10px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+  }
+
+  .steps__n {
+    color: var(--muted);
+    font-size: var(--step--1);
+  }
+
+  .steps__item h3 {
+    font-size: 1.375rem;
+  }
+
+  .proof {
+    overflow: hidden;
+  }
+
+  .proof__log {
+    margin: 0;
+    padding: 22px 24px;
+    overflow-x: auto;
+    font-size: clamp(0.75rem, 0.6rem + 0.5vw, 0.9375rem);
+    line-height: 1.9;
+    color: var(--muted);
+    white-space: pre;
+  }
+
+  /* the card clips anything outside it, so the focus ring is drawn inside */
+  .proof__log:focus-visible {
+    outline-offset: -4px;
+    border-radius: var(--radius);
+  }
+
+  .proof__log :global(.proof__n) {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .proof__log :global(.proof__ok) {
+    color: var(--text);
+  }
+
+  .proof__note,
+  .caption {
+    margin-top: 14px;
+    font-size: 0.9375rem;
+    max-width: 46rem;
+  }
+
+  /* ---------- download / play ---------- */
+  .get {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .get__card {
+    display: grid;
+    align-content: start;
+    gap: 10px;
+    padding: clamp(22px, 3vw, 32px);
+  }
+
+  .get__title {
+    font-size: clamp(1.375rem, 1.1rem + 1vw, 1.75rem);
+  }
+
+  .get__date {
+    font-size: var(--step--1);
+    margin-top: -4px;
+  }
+
+  .get__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 20px;
+    margin-top: 12px;
+    align-self: end;
+  }
+
+  .get__more {
+    font-size: 0.9375rem;
+    color: var(--muted);
+  }
+
+  .get__more:hover {
+    color: var(--text);
+  }
+
+  @media (max-width: 719.98px) {
+    .get {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  /* ---------- discord ---------- */
+  .band {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px 32px;
+    padding: clamp(22px, 3vw, 32px);
+  }
+
+  .band__text {
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: clamp(1.25rem, 1rem + 1vw, 1.625rem);
+    line-height: 1.2;
+  }
+</style>

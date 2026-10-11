@@ -1,0 +1,284 @@
+---
+import { Image } from 'astro:assets';
+import Icon from './Icon.astro';
+import logoMark from '../assets/logo-mark.png';
+import { LINKS, NAV } from '../lib/site';
+
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+---
+
+<header class="bar" data-topbar>
+  <div class="bar__in wrap">
+    <a class="brand" href="/" aria-label="rustyAC home">
+      <Image src={logoMark} alt="" height={28} densities={[1, 2]} loading="eager" class="brand__mark" />
+      <span class="brand__word">rusty<span class="brand__ac">AC</span></span>
+    </a>
+
+    <nav class="nav" aria-label="Main">
+      <ul class="nav__list" id="nav-list" data-nav-list>
+        {
+          NAV.map((link) => (
+            <li>
+              <a
+                href={link.href}
+                aria-current={!link.external && link.href === path ? 'page' : undefined}
+                rel={link.external ? 'noopener' : undefined}
+              >
+                {link.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <div class="bar__tools">
+      <a class="icon-btn" href={LINKS.github} rel="noopener" aria-label="rustyAC on GitHub">
+        <Icon name="github" />
+      </a>
+      <a class="icon-btn" href={LINKS.discord} rel="noopener" aria-label="rustyAC Discord">
+        <Icon name="discord" />
+      </a>
+      <button class="icon-btn theme" type="button" data-theme-toggle aria-label="Switch to light theme">
+        <span class="theme__sun"><Icon name="sun" /></span>
+        <span class="theme__moon"><Icon name="moon" /></span>
+      </button>
+      <button
+        class="icon-btn menu"
+        type="button"
+        data-nav-toggle
+        aria-expanded="false"
+        aria-controls="nav-list"
+        aria-label="Menu"
+      >
+        <span class="menu__open"><Icon name="menu" /></span>
+        <span class="menu__close"><Icon name="close" /></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<script>
+  const root = document.documentElement;
+
+  // Theme toggle. The <head> script in Base.astro has already applied the stored theme.
+  const themeBtn = document.querySelector<HTMLButtonElement>('[data-theme-toggle]');
+  const label = () =>
+    themeBtn?.setAttribute(
+      'aria-label',
+      root.dataset['theme'] === 'light' ? 'Switch to dark theme' : 'Switch to light theme',
+    );
+  label();
+  themeBtn?.addEventListener('click', () => {
+    const next = root.dataset['theme'] === 'light' ? 'dark' : 'light';
+    root.dataset['theme'] = next;
+    try {
+      localStorage.setItem('theme', next);
+    } catch {
+      // storage can be blocked; the choice then lasts for this page only
+    }
+    label();
+  });
+
+  // Menu button on narrow screens.
+  const navBtn = document.querySelector<HTMLButtonElement>('[data-nav-toggle]');
+  const bar = document.querySelector<HTMLElement>('[data-topbar]');
+  const setOpen = (open: boolean) => {
+    navBtn?.setAttribute('aria-expanded', String(open));
+    bar?.toggleAttribute('data-open', open);
+  };
+  navBtn?.addEventListener('click', () => {
+    const open = navBtn.getAttribute('aria-expanded') !== 'true';
+    setOpen(open);
+    // the list sits before the button in the page, so Tab alone would skip past it
+    if (open) document.querySelector<HTMLAnchorElement>('[data-nav-list] a')?.focus();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && navBtn?.getAttribute('aria-expanded') === 'true') {
+      setOpen(false);
+      navBtn.focus();
+    }
+  });
+  document.querySelector('[data-nav-list]')?.addEventListener('click', (e) => {
+    if (e.target instanceof HTMLAnchorElement) setOpen(false);
+  });
+  window.matchMedia('(min-width: 900px)').addEventListener('change', () => setOpen(false));
+</script>
+
+<style>
+  .bar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    height: var(--bar-h);
+    background: var(--bar-bg);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    backdrop-filter: blur(14px) saturate(1.2);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .bar__in {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    flex: none;
+  }
+
+  .brand__mark {
+    height: 28px;
+    width: auto;
+  }
+
+  .brand__word {
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: 1.1875rem;
+    letter-spacing: -0.01em;
+  }
+
+  .brand__ac {
+    color: var(--accent);
+  }
+
+  .nav {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .nav__list {
+    display: flex;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .nav__list a {
+    display: block;
+    padding: 8px 12px;
+    border-radius: 999px;
+    color: var(--muted);
+    font-size: 0.9375rem;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.15s var(--ease);
+  }
+
+  .nav__list a:hover,
+  .nav__list a[aria-current='page'] {
+    color: var(--text);
+  }
+
+  .bar__tools {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: none;
+    margin-left: auto;
+  }
+
+  .icon-btn {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color 0.15s var(--ease);
+  }
+
+  .icon-btn:hover {
+    color: var(--text);
+  }
+
+  .theme__moon,
+  :global([data-theme='light']) .theme__sun {
+    display: none;
+  }
+
+  :global([data-theme='light']) .theme__moon {
+    display: block;
+  }
+
+  .menu,
+  .menu__close {
+    display: none;
+  }
+
+  @media (max-width: 899.98px) {
+    .menu {
+      display: grid;
+    }
+
+    .nav {
+      flex: 0;
+    }
+
+    .nav__list {
+      display: none;
+      position: absolute;
+      top: var(--bar-h);
+      left: 0;
+      right: 0;
+      flex-direction: column;
+      gap: 0;
+      padding: 8px var(--gutter) 16px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .bar[data-open] .nav__list {
+      display: flex;
+    }
+
+    .nav__list a {
+      padding: 12px 4px;
+      border-radius: 6px;
+      font-size: 1rem;
+      color: var(--text);
+    }
+
+    .nav__list li + li {
+      border-top: 1px solid var(--line);
+    }
+
+    .bar[data-open] .menu__open {
+      display: none;
+    }
+
+    .bar[data-open] .menu__close {
+      display: block;
+    }
+  }
+
+  @media (max-width: 359.98px) {
+    .bar__in {
+      gap: 8px;
+    }
+
+    .brand {
+      gap: 6px;
+    }
+
+    .brand__word {
+      font-size: 1.0625rem;
+    }
+
+    .icon-btn {
+      width: 32px;
+    }
+  }
+</style>

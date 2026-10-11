@@ -1,0 +1,33 @@
+---
+import Icon from './Icon.astro';
+import { LINKS } from '../lib/site';
+
+interface Props {
+  title: string;
+}
+const { title } = Astro.props;
+---
+
+<section class="stub wrap">
+  <p class="eyebrow">rustyAC</p>
+  <h1>{title}</h1>
+  <p class="lede"><slot /></p>
+  <div class="btn-row">
+    <a class="btn" href="/">Back to the homepage</a>
+    <a class="btn" href={LINKS.github} rel="noopener"><Icon name="github" />GitHub</a>
+  </div>
+</section>
+
+<style>
+  .stub {
+    display: grid;
+    justify-items: start;
+    align-content: start;
+    gap: 20px;
+    padding-block: clamp(72px, 14vh, 160px);
+  }
+
+  .stub h1 {
+    font-size: clamp(2rem, 1.4rem + 3vw, 3.25rem);
+  }
+</style>

@@ -1,0 +1,10 @@
+assets-src
+assets
+scratch
+prompts
+node_modules
+dist
+.astro
+.git
+docs
+brainstorm.md

@@ -1,0 +1,31 @@
+# Raw source files (the 15.8 MB original model). The optimised copies the site serves live elsewhere.
+assets-src/models/
+# Blender working files
+*.blend1
+node_modules/
+dist/
+.astro/
+
+# Notes (same rule as the rustyAC repo)
+brainstorm.md
+
+# Blender working files and check renders (the .blend is the source; too big for git)
+assets-src/blender/
+
+# Claude Code task prompts and scratch space
+prompts/
+scratch/
+
+# Added in task 01
+# The owner's 15.8 MB source model (same reason as assets-src/models/)
+/assets/
+# Local environment files and editor/OS leftovers
+.env
+.env.*
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+# Claude Code local settings
+.claude/

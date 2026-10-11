@@ -1,0 +1,94 @@
+---
+import '../styles/global.css';
+import TopBar from '../components/TopBar.astro';
+import Footer from '../components/Footer.astro';
+import { SITE_NAME, SITE_URL } from '../lib/site';
+
+import syne400 from '@fontsource/syne/files/syne-latin-400-normal.woff2?url';
+import syne700 from '@fontsource/syne/files/syne-latin-700-normal.woff2?url';
+import inter from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url';
+import mono400 from '@fontsource/jetbrains-mono/files/jetbrains-mono-latin-400-normal.woff2?url';
+import mono500 from '@fontsource/jetbrains-mono/files/jetbrains-mono-latin-500-normal.woff2?url';
+
+interface Props {
+  /** Page title without the site name; omit on the homepage. */
+  title?: string;
+  description: string;
+  noindex?: boolean;
+  /** Extra JSON-LD for this page. */
+  jsonLd?: Record<string, unknown>;
+}
+
+const { title, description, noindex = false, jsonLd } = Astro.props;
+
+const fullTitle = title ? `${title} · ${SITE_NAME}` : `${SITE_NAME}: Assetto Corsa, rebuilt from scratch in Rust`;
+const canonical = new URL(Astro.url.pathname, Astro.site ?? SITE_URL).href;
+const ogImage = new URL('/og/rustyac-og.webp', Astro.site ?? SITE_URL).href;
+
+// Latin subsets only. Declared here (not through the packages' CSS) so the files can be preloaded
+// and no unused subset ends up in the build.
+const LATIN =
+  'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
+const face = (family: string, weight: string, url: string, format = 'woff2') =>
+  `@font-face{font-family:'${family}';font-style:normal;font-display:swap;font-weight:${weight};src:url(${url}) format('${format}');unicode-range:${LATIN}}`;
+const fontCss = [
+  face('Syne', '400', syne400),
+  face('Syne', '700', syne700),
+  face('Inter Variable', '100 900', inter, 'woff2-variations'),
+  face('JetBrains Mono', '400', mono400),
+  face('JetBrains Mono', '500', mono500),
+].join('');
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script is:inline>
+      // Runs before first paint so the stored theme never flashes.
+      try {
+        if (localStorage.getItem('theme') === 'light') document.documentElement.dataset.theme = 'light';
+      } catch (e) {}
+    </script>
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex" />}
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:type" content="image/webp" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="rustyAC: Assetto Corsa, rebuilt from scratch in Rust." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <meta name="theme-color" content="#0E0E0E" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+
+    <link rel="preload" as="font" type="font/woff2" href={syne700} crossorigin />
+    <link rel="preload" as="font" type="font/woff2" href={inter} crossorigin />
+    <style is:inline set:html={fontCss}></style>
+
+    {jsonLd && <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+    <meta name="generator" content={Astro.generator} />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <TopBar />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>
