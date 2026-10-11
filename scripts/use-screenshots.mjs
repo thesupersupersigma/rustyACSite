@@ -2,9 +2,13 @@
 //
 //   npm run screenshots                         from assets-src/media/screenshots/
 //   node scripts/use-screenshots.mjs <folder>   from somewhere else
+//   node scripts/use-screenshots.mjs --webp     only the WebP pictures: no PNG is copied and the
+//                                               share image (public/og/) is left alone
 //
-// Only the files the site uses are copied (the list below), under the same names, into
-// src/assets/screenshots/. Then `npm run build` makes the AVIF/WebP sizes. See docs/screenshots.md.
+// Only the files the site uses are copied (the lists below), under the same names, into
+// src/assets/screenshots/. The slider pictures and the share image's source stay PNG; the hero and
+// gallery pictures are stored as WebP at quality 92, which keeps the repo small. Then
+// `npm run build` makes the AVIF/WebP sizes. See docs/screenshots.md.
 import sharp from 'sharp';
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -14,7 +18,10 @@ import path from 'node:path';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // a folder given on the command line is relative to where the command is run
-const from = process.argv[2] ? path.resolve(process.argv[2]) : path.join(root, 'assets-src', 'media', 'screenshots');
+const args = process.argv.slice(2);
+const webpOnly = args.includes('--webp');
+const folder = args.find((arg) => !arg.startsWith('--'));
+const from = folder ? path.resolve(folder) : path.join(root, 'assets-src', 'media', 'screenshots');
 const to = path.join(root, 'src', 'assets', 'screenshots');
 
 /** Every screenshot the site uses, with the size it should be captured at. */
@@ -28,6 +35,25 @@ const USED = [
   { file: 'og_burnout.png', width: 2400, height: 1260 },
 ];
 
+/**
+ * Pictures stored as WebP (quality 92) instead of PNG. `from` names another source folder, relative
+ * to the project, for the ones that are not in assets-src/media/screenshots/.
+ */
+const AS_WEBP = [
+  { file: 'hero_burnout.png', width: 2560, height: 1440 },
+  { file: 'gallery_488_gt3_laguna_seca.png', width: 2560, height: 1440 },
+  { file: 'gallery_crash_damage.png', width: 2560, height: 1440 },
+  { file: 'gallery_f2004_cockpit.png', width: 2560, height: 1440 },
+  { file: 'gallery_f2004_spa_chase.png', width: 2560, height: 1440 },
+  { file: 'gallery_f2004_spa_trackside.png', width: 2560, height: 1440 },
+  { file: 'gallery_f40_monza.png', width: 2560, height: 1440 },
+  { file: 'gallery_heavy_clouds.png', width: 2560, height: 1440 },
+  { file: 'gallery_night_lights.png', width: 2560, height: 1440 },
+  // the browser preview, a copy of rustyAC's docs/port/web_spa.png
+  { file: 'web_spa.png', width: 1024, height: 576, from: path.join('assets-src', 'screenshots') },
+];
+const WEBP_QUALITY = 92;
+
 if (!existsSync(from)) {
   console.error(`nothing to copy: ${from} does not exist`);
   process.exit(1);
@@ -35,7 +61,7 @@ if (!existsSync(from)) {
 await mkdir(to, { recursive: true });
 
 let copied = 0;
-for (const shot of USED) {
+for (const shot of webpOnly ? [] : USED) {
   const source = path.join(from, shot.file);
   if (!existsSync(source)) {
     console.log(`missing   ${shot.file} (the site keeps its current one)`);
@@ -47,6 +73,24 @@ for (const shot of USED) {
   await copyFile(source, path.join(to, shot.file));
   copied++;
   console.log(`copied    ${shot.file}  ${size}${size === wanted ? '' : `  (expected ${wanted})`}`);
+}
+
+let converted = 0;
+for (const shot of AS_WEBP) {
+  // a folder given on the command line wins; the list's own folder is the fallback
+  const candidates = [path.join(from, shot.file), ...(shot.from ? [path.join(root, shot.from, shot.file)] : [])];
+  const source = candidates.find((file) => existsSync(file));
+  const name = shot.file.replace(/.png$/, '.webp');
+  if (!source) {
+    console.log(`missing   ${shot.file} (the site keeps its current ${name})`);
+    continue;
+  }
+  const meta = await sharp(source).metadata();
+  const size = `${meta.width}x${meta.height}`;
+  const wanted = `${shot.width}x${shot.height}`;
+  const out = await sharp(source).webp({ quality: WEBP_QUALITY, effort: 6 }).toFile(path.join(to, name));
+  converted++;
+  console.log(`webp q${WEBP_QUALITY}  ${name}  ${size}  ${(out.size / 1024).toFixed(0)} KB${size === wanted ? '' : `  (expected ${wanted})`}`);
 }
 
 // A before/after pair only lines up under the slider when both halves have the same size. This looks at
