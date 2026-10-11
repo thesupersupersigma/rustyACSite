@@ -1,0 +1,359 @@
+{
+  "rustyac_version": "0.23.1",
+  "format": {
+    "sample_rate": 48000,
+    "bits": 16,
+    "channels": 2
+  },
+  "common_gain_db": 8.38,
+  "common_gain_note": "every raw clip (master level 0.12 in FMOD) was multiplied by this one gain: the loudest clip (burnout_reference) then peaks at -1 dBFS",
+  "listener": "free camera 6 m from the car: 5.5 m to its right, 2.5 m behind its centre, 1.2 m up, looking at the car; no track sounds",
+  "car": "ks_ferrari_f2004",
+  "bank": "content/cars/ks_ferrari_f2004/sfx/ks_ferrari_f2004.bank (and content/sfx/common.bank)",
+  "clips": [
+    {
+      "file": "engine_on_idle.wav",
+      "kind": "loop",
+      "duration_s": 7.7548,
+      "samples": 372232,
+      "peak_dbfs": -11.99,
+      "rms_dbfs": -24.12,
+      "rpm": 4000,
+      "throttle": 1.0,
+      "fmod_events": [
+        "event:/cars/ks_ferrari_f2004/engine_ext"
+      ],
+      "loop_start": 0,
+      "loop_end": 372232,
+      "loop_note": "the whole file loops: the sample after the last is the first",
+      "seam_jump": 197.0,
+      "jump_inside_p99_9": 622.0,
+      "jump_inside_max": 889.0,
+      "spectral_centroid_hz": 1871.0,
+      "strongest_line_hz": 81.8
+    },
+    {
+      "file": "engine_off_idle.wav",
+      "kind": "loop",
+      "duration_s": 7.7548,
+      "samples": 372232,
+      "peak_dbfs": -13.94,
+      "rms_dbfs": -26.12,
+      "rpm": 4000,
+      "throttle": 0.0,
+      "fmod_events": [
+        "event:/cars/ks_ferrari_f2004/engine_ext"
+      ],
+      "loop_start": 0,
+      "loop_end": 372232,
+      "loop_note": "the whole file loops: the sample after the last is the first",
+      "seam_jump": 158.0,
+      "jump_inside_p99_9": 496.0,
+      "jump_inside_max": 709.0,
+      "spectral_centroid_hz": 1872.4,
+      "strongest_line_hz": 81.8
+    },
+    {
+      "file": "engine_on_4000.wav",
+      "kind": "loop",
+      "duration_s": 7.7548,
+      "samples": 372232,
+      "peak_dbfs": -12.07,
+      "rms_dbfs": -24.12,
+      "rpm": 4000,
+      "throttle": 1.0,
+      "fmod_events": [
+        "event:/cars/ks_ferrari_f2004/engine_ext"
+      ],
+      "loop_start": 0,
+      "loop_end": 372232,
+      "loop_note": "the whole file loops: the sample after the last is the first",
+      "seam_jump": 56.0,
+      "jump_inside_p99_9": 622.0,
+      "jump_inside_max": 892.0,
+      "spectral_centroid_hz": 1870.1,
+      "strongest_line_hz": 81.8
+    },
+    {
+      "file": "engine_off_4000.wav",
+      "kind": "loop",
+      "duration_s": 7.7548,
+      "samples": 372232,
+      "peak_dbfs": -13.94,
+      "rms_dbfs": -26.12,
+      "rpm": 4000,
+      "throttle": 0.0,
+      "fmod_events": [
+        "event:/cars/ks_ferrari_f2004/engine_ext"
+      ],
+      "loop_start": 0,
+      "loop_end": 372232,
+      "loop_note": "the whole file loops: the sample after the last is the first",
+      "seam_jump": 42.0,
+      "jump_inside_p99_9": 496.0,
+      "jump_inside_max": 708.0,
+      "spectral_centroid_hz": 1871.4,
+      "strongest_line_hz": 81.8
+    },
+    {
+      "file": "engine_on_7000.wav",
+      "kind": "loop",
+      "duration_s": 7.8033,
+      "samples": 374560,
+      "peak_dbfs": -5.8,
+      "rms_dbfs": -18.44,
+      "rpm": 7000,
+      "throttle": 1.0,
+      "fmod_events": [
+        "event:/cars/ks_ferrari_f2004/engine_ext"
+      ],
+      "loop_start": 0,
+      "loop_end": 374560,
+      "loop_note": "the whole file loops: the sample after the last is the first",
+      "seam_jump": 296.0,
+      "jump_inside_p99_9": 1688.0,
+      "jump_inside_max": 2900.0,
+      "spectral_centroid_hz": 2106.2,
+      "strongest_line_hz": 288.5
+    },
+    {
+      "file": "engine_off_7000.wav",
+      "kind": "loop",
+      "duration_s": 7.7565,
+      "samples": 372312,
+      "peak_dbfs": -8.42,
+      "rms_dbfs": -21.06,
+      "rpm": 7000,
+      "throttle": 0.0,
+      "fmod_events": [
+        "event:/cars/ks_ferrari_f2004/engine_ext"
+      ],
+      "loop_start": 0,
+      "loop_end": 372312,
+      "loop_note": "the whole file loops: the sample after the last is the first",
+      "seam_jump": 297.0,
+      "jump_inside_p99_9": 1267.0,
+      "jump_inside_max": 2249.0,
+      "spectral_centroid_hz": 2052.0,
+      "strongest_line_hz": 143.0
+    },
+    {
+      "file": "engine_on_10000.wav",
+      "kind": "loop",
+      "duration_s": 8.0275,
+      "samples": 385320,
+      "peak_dbfs": -3.01,
+      "rms_dbfs": -15.59,
+      "rpm": 10000,
+      "throttle": 1.0,
+      "fmod_events": [
+        "event:/cars/ks_ferrari_f2004/engine_ext"
+      ],
+      "loop_start": 0,
+      "loop_end": 385320,
+      "loop_note": "the whole file loops: the sample after the last is the first",
+      "seam_jump": 987.0,
+      "jump_inside_p99_9": 2753.0,
+      "jump_inside_max": 3955.0,
+      "spectral_centroid_hz": 1881.9,
+      "strongest_line_hz": 415.5
+    },
+    {
+      "file": "engine_off_10000.wav",
+      "kind": "loop",
+      "duration_s": 7.9895,
+      "samples": 383496,
+      "peak_dbfs": -4.43,
+      "rms_dbfs": -16.69,
+      "rpm": 10000,
+      "throttle": 0.0,
+      "fmod_events": [
+        "event:/cars/ks_ferrari_f2004/engine_ext"
+      ],
+      "loop_start": 0,
+      "loop_end": 383496,
+      "loop_note": "the whole file loops: the sample after the last is the first",
+      "seam_jump": 16.0,
+      "jump_inside_p99_9": 2089.0220000001136,
+      "jump_inside_max": 3123.0,
+      "spectral_centroid_hz": 1511.7,
+      "strongest_line_hz": 417.5
+    },
+    {
+      "file": "engine_on_13000.wav",
+      "kind": "loop",
+      "duration_s": 8.2243,
+      "samples": 394768,
+      "peak_dbfs": -3.0,
+      "rms_dbfs": -16.61,
+      "rpm": 13000,
+      "throttle": 1.0,
+      "fmod_events": [
+        "event:/cars/ks_ferrari_f2004/engine_ext"
+      ],
+      "loop_start": 0,
+      "loop_end": 394768,
+      "loop_note": "the whole file loops: the sample after the last is the first",
+      "seam_jump": 415.0,
+      "jump_inside_p99_9": 3438.0,
+      "jump_inside_max": 4805.0,
+      "spectral_centroid_hz": 2673.0,
+      "strongest_line_hz": 540.0
+    },
+    {
+      "file": "engine_off_13000.wav",
+      "kind": "loop",
+      "duration_s": 7.7803,
+      "samples": 373456,
+      "peak_dbfs": -7.62,
+      "rms_dbfs": -21.68,
+      "rpm": 13000,
+      "throttle": 0.0,
+      "fmod_events": [
+        "event:/cars/ks_ferrari_f2004/engine_ext"
+      ],
+      "loop_start": 0,
+      "loop_end": 373456,
+      "loop_note": "the whole file loops: the sample after the last is the first",
+      "seam_jump": 344.0,
+      "jump_inside_p99_9": 1860.0,
+      "jump_inside_max": 3519.0,
+      "spectral_centroid_hz": 2805.4,
+      "strongest_line_hz": 540.8
+    },
+    {
+      "file": "engine_on_16000.wav",
+      "kind": "loop",
+      "duration_s": 8.2487,
+      "samples": 395936,
+      "peak_dbfs": -3.38,
+      "rms_dbfs": -12.07,
+      "rpm": 16000,
+      "throttle": 1.0,
+      "fmod_events": [
+        "event:/cars/ks_ferrari_f2004/engine_ext"
+      ],
+      "loop_start": 0,
+      "loop_end": 395936,
+      "loop_note": "the whole file loops: the sample after the last is the first",
+      "seam_jump": 305.0,
+      "jump_inside_p99_9": 4747.0,
+      "jump_inside_max": 7190.0,
+      "spectral_centroid_hz": 3076.4,
+      "strongest_line_hz": 669.2
+    },
+    {
+      "file": "engine_off_16000.wav",
+      "kind": "loop",
+      "duration_s": 7.7563,
+      "samples": 372304,
+      "peak_dbfs": -3.89,
+      "rms_dbfs": -20.28,
+      "rpm": 16000,
+      "throttle": 0.0,
+      "fmod_events": [
+        "event:/cars/ks_ferrari_f2004/engine_ext"
+      ],
+      "loop_start": 0,
+      "loop_end": 372304,
+      "loop_note": "the whole file loops: the sample after the last is the first",
+      "seam_jump": 1289.0,
+      "jump_inside_p99_9": 2575.0,
+      "jump_inside_max": 5621.0,
+      "spectral_centroid_hz": 3267.4,
+      "strongest_line_hz": 665.8
+    },
+    {
+      "file": "limiter.wav",
+      "kind": "loop",
+      "duration_s": 7.7505,
+      "samples": 372024,
+      "peak_dbfs": -3.54,
+      "rms_dbfs": -11.66,
+      "rpm": 18800,
+      "throttle": 1.0,
+      "note": "rustyAC physics in neutral, throttle held down: the engine on its 18,800 rpm limiter (the F2004 bank has no limiter event)",
+      "fmod_events": [
+        "event:/cars/ks_ferrari_f2004/engine_ext"
+      ],
+      "loop_start": 0,
+      "loop_end": 372024,
+      "loop_note": "the whole file loops: the sample after the last is the first",
+      "seam_jump": 1217.0,
+      "jump_inside_p99_9": 5639.9550000000745,
+      "jump_inside_max": 7653.0,
+      "spectral_centroid_hz": 3063.4,
+      "strongest_line_hz": 780.8
+    },
+    {
+      "file": "wheelspin.wav",
+      "kind": "loop",
+      "duration_s": 7.8262,
+      "samples": 375656,
+      "peak_dbfs": -15.85,
+      "rms_dbfs": -32.08,
+      "note": "rear wheels at 110 rad/s with slip ratio 1, the speed the sound reads 20 km/h (full skid volume), engine level 0",
+      "fmod_events": [
+        "event:/cars/ks_ferrari_f2004/skid_ext",
+        "event:/cars/ks_ferrari_f2004/wheel"
+      ],
+      "loop_start": 0,
+      "loop_end": 375656,
+      "loop_note": "the whole file loops: the sample after the last is the first",
+      "seam_jump": 74.0,
+      "jump_inside_p99_9": 486.0,
+      "jump_inside_max": 780.0,
+      "spectral_centroid_hz": 1534.6,
+      "strongest_line_hz": 788.5
+    },
+    {
+      "file": "pit_wheelgun.wav",
+      "kind": "oneshot",
+      "duration_s": 1.0176,
+      "samples": 48847,
+      "peak_dbfs": -18.83,
+      "rms_dbfs": -32.33,
+      "fmod_events": [
+        "event:/common/screw"
+      ]
+    },
+    {
+      "file": "pit_wheelgun_off.wav",
+      "kind": "oneshot",
+      "duration_s": 1.2346,
+      "samples": 59260,
+      "peak_dbfs": -20.83,
+      "rms_dbfs": -33.28,
+      "fmod_events": [
+        "event:/common/unscrew"
+      ]
+    },
+    {
+      "file": "backfire_1.wav",
+      "kind": "oneshot",
+      "duration_s": 0.4781,
+      "samples": 22947,
+      "peak_dbfs": -12.15,
+      "rms_dbfs": -27.84,
+      "throttle": 0.0,
+      "fmod_events": [
+        "event:/cars/ks_ferrari_f2004/backfire_ext"
+      ]
+    },
+    {
+      "file": "burnout_reference.wav",
+      "kind": "oneshot",
+      "duration_s": 32.0999,
+      "samples": 1540797,
+      "peak_dbfs": -1.0,
+      "rms_dbfs": -12.0,
+      "note": "rustyAC physics at Spa: throttle held down with the brake at 0.6 from the spawn until 2 s after a rear tyre bursts; the listener moves with the car",
+      "fmod_events": [
+        "event:/cars/ks_ferrari_f2004/engine_ext",
+        "event:/cars/ks_ferrari_f2004/skid_ext",
+        "event:/cars/ks_ferrari_f2004/wheel",
+        "event:/cars/ks_ferrari_f2004/gear_ext"
+      ]
+    }
+  ]
+}

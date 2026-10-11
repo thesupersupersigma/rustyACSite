@@ -29,3 +29,8 @@ Thumbs.db
 *.log
 # Claude Code local settings
 .claude/
+
+# Added in task 03
+# Raw media from rustyAC: the PNGs are copied into src/assets/, the WAVs are kept as FLAC
+assets-src/media/screenshots/
+assets-src/media/audio/*.wav
