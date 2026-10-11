@@ -1,0 +1,237 @@
+---
+import Page from '../layouts/Page.astro';
+import ImageFigure from '../components/ImageFigure.astro';
+import gt3 from '../assets/screenshots/gallery_488_gt3_laguna_seca.webp';
+import { LINKS } from '../lib/site';
+import { reportUrl } from '../data/roadmap';
+import {
+  CARS,
+  CAR_SYSTEMS,
+  LOADED_TRACKS,
+  LOOSE_OBJECTS,
+  REFUSED_CARS,
+  REFUSED_TRACKS,
+  REFUSED_TRACK_REASON,
+  TRACKS,
+  TRACK_LIMITS,
+} from '../data/compatibility';
+
+const description = `Which Assetto Corsa cars and tracks load in rustyAC: ${CARS.loaded} of ${CARS.installed} installed cars and all ${TRACKS.loaded} drivable track layouts. What is refused, and why.`;
+
+const TOC = [
+  { id: 'cars', label: 'Cars' },
+  { id: 'tracks', label: 'Tracks' },
+  { id: 'csp', label: 'Custom Shaders Patch' },
+  { id: 'check', label: 'Check your own install' },
+];
+---
+
+<Page
+  title="Compatibility"
+  intro="Every car and track that plain Assetto Corsa can load, loads in rustyAC. Content made only for Custom Shaders Patch is refused."
+  description={description}
+  toc={TOC}
+>
+  <ul class="tally">
+    <li class="card">
+      <span class="tally__n mono">{CARS.loaded}<span class="tally__of"> / {CARS.installed}</span></span>
+      <span class="muted">installed cars load</span>
+    </li>
+    <li class="card">
+      <span class="tally__n mono">{TRACKS.loaded}<span class="tally__of"> / {TRACKS.entries}</span></span>
+      <span class="muted">track layouts load and drive</span>
+    </li>
+  </ul>
+  <!-- rustyAC docs/port/audio.md, "Cars": the 123 are the cars installed on the PC the reports were written on -->
+  <p>
+    These counts are for one Assetto Corsa install, the one rustyAC is tested on: the base game, some of its DLC and
+    a few mods. They are not a count of everything ever made for the game.
+  </p>
+
+  <h2 id="cars">Cars</h2>
+  <!-- docs/port/suspensions.md, sections 1 and 4 -->
+  <p>
+    <strong>{CARS.loaded} of the {CARS.installed} installed cars load.</strong> The {CARS.refused} that are refused
+    need Custom Shaders Patch, and plain Assetto Corsa cannot run them either.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Refused car</th><th>Why</th></tr>
+      </thead>
+      <tbody>
+        {
+          REFUSED_CARS.map((car) => (
+            <tr>
+              <td class="mono">{car.folder}</td>
+              <td>{car.reason}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+  <p>The reports name cars by their folder under <code>content\cars</code>, so that is what is listed here.</p>
+
+  <h3>What a car can have</h3>
+  <div class="table-wrap">
+    <table>
+      <tbody>
+        {
+          CAR_SYSTEMS.map((row) => (
+            <tr>
+              <th scope="row">{row.what}</th>
+              <td>{row.detail}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+  <!-- packaging/HOW_TO_RUN.txt, section 1; docs/port/suspensions.md, section 5 -->
+  <p>
+    <strong>Mods work when plain Assetto Corsa can load them.</strong> A car with a plain <code>data</code> folder (an
+    unpacked mod, the SDK's cars) is read from that; <code>--car</code> also takes the path of a car's folder.
+  </p>
+
+  <ImageFigure
+    src={gt3}
+    alt="A Ferrari 488 GT3 on track at Laguna Seca, drawn by rustyAC"
+    caption="The Ferrari 488 GT3 at Laguna Seca."
+    sizes="(min-width: 1184px) 856px, (min-width: 1024px) calc(100vw - 328px), (min-width: 640px) calc(100vw - 48px), calc(100vw - 32px)"
+  />
+
+  <h2 id="tracks">Tracks</h2>
+  <!-- docs/port/tracks.md, section 1 -->
+  <p>
+    <strong>All {TRACKS.loaded} drivable layouts load, drive and time laps.</strong> The install has {TRACKS.folders} track
+    folders with {TRACKS.entries} entries in the track menu; the other {TRACKS.refused} are refused with a reason.
+  </p>
+  <ul>
+    <li>
+      <strong>Point-to-point tracks work</strong> (the Trento-Bondone hill climb, the Nordschleife tourist layout): the
+      clock starts at the start gate and the run is listed when you pass the finish gate.
+    </li>
+    <li>
+      <strong>Loose cones work.</strong> {LOOSE_OBJECTS.tracks} of the tracks have loose objects ({LOOSE_OBJECTS.objects} in
+      all: cones and marker boards). They sit still until the car's body hits them, then fly, tumble and come to
+      rest.
+    </li>
+    <li>Laps and sectors are timed from the track's own timing lines, and a lap is spoiled by the game's own rule.</li>
+  </ul>
+
+  <h3>The {TRACKS.loaded} layouts that load</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Track folder</th><th>Layouts</th></tr>
+      </thead>
+      <tbody>
+        {
+          LOADED_TRACKS.map((track) => (
+            <tr>
+              <td class="mono">{track.folder}</td>
+              <td>
+                {track.layouts.length > 0 ? <span class="mono">{track.layouts.join(', ')}</span> : <span class="muted">one layout</span>}
+                {track.note && <span class="muted"> ({track.note})</span>}
+              </td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <h3>The {TRACKS.refused} that are refused</h3>
+  <!-- docs/port/tracks.md, section 6 -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Track / layout</th><th>Why</th></tr>
+      </thead>
+      <tbody>
+        {
+          REFUSED_TRACKS.map((track) => (
+            <tr>
+              <td class="mono">{track.entry}</td>
+              <td>{REFUSED_TRACK_REASON[track.kind]}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <h3>What is not there yet</h3>
+  <ul>
+    {TRACK_LIMITS.map((limit) => <li>{limit}</li>)}
+  </ul>
+
+  <h2 id="csp">Custom Shaders Patch</h2>
+  <!-- docs/port/awd_ers.md, section 6 ("CSP is closed source"); docs/port/tracks.md, sections 6 and 8 -->
+  <p>
+    Custom Shaders Patch (CSP) is a closed-source add-on that changes Assetto Corsa itself, and some cars and tracks
+    are made only for it. rustyAC is a port of plain Assetto Corsa and does not implement CSP.
+  </p>
+  <p>
+    <strong>Refused</strong> means rustyAC stops with a message that names the file and the reason, instead of
+    loading something it would get wrong. Each refused car and track above is one that plain Assetto Corsa, without
+    CSP, cannot load either. Nothing is decrypted.
+  </p>
+  <!-- rustyAC README.md; docs/port/grip_investigation.md -->
+  <p>
+    One more thing to know: if CSP is switched on in your own Assetto Corsa, the same car will not handle the same
+    there as in rustyAC. CSP changes the physics, even for a standard car. rustyAC matches the game without it.
+  </p>
+
+  <h2 id="check">Check your own install</h2>
+  <!-- packaging/HOW_TO_RUN.txt, section 2 -->
+  <p>Your install is not the one above. To see what yours has:</p>
+  <pre><code>rustyac.exe --list-tracks</code></pre>
+  <p>
+    It lists every track and layout of your game, and which ones cannot be driven and why. A car that cannot load
+    says so when you start it with <code>--car</code>.
+  </p>
+  <p>
+    The details are in the reports: <a href={reportUrl('suspensions.md')} rel="noopener">cars and suspensions</a>,
+    <a href={reportUrl('tracks.md')} rel="noopener">every track</a>. Found something that should load and does not?
+    <a href={`${LINKS.github}/issues`} rel="noopener">Open an issue</a>.
+  </p>
+</Page>
+
+<style>
+  .tally {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-width: 44rem;
+  }
+
+  .tally li {
+    display: grid;
+    gap: 4px;
+    padding: 20px 22px;
+  }
+
+  .tally__n {
+    font-size: clamp(2rem, 1.5rem + 2vw, 2.75rem);
+    font-weight: 500;
+    line-height: 1.1;
+  }
+
+  .tally__of {
+    color: var(--muted);
+    font-size: 0.5em;
+  }
+
+  th[scope='row'] {
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text);
+    background: none;
+  }
+</style>

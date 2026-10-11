@@ -1,9 +1,177 @@
 ---
-// Placeholder page so no link is dead. Task 04 replaces it.
-import Base from '../layouts/Base.astro';
-import StubPage from '../components/StubPage.astro';
+import Page from '../layouts/Page.astro';
+import Changelog from '../components/Changelog.astro';
+import { LINKS } from '../lib/site';
+import { getReleases } from '../lib/release';
+import { LATER, PHASES, PROGRESS_NOTE, STATUS_TEXT, reportUrl } from '../data/roadmap';
+
+const { all } = await getReleases();
+const released = new Set(all.map((r) => r.tag));
+
+const description =
+  'The rustyAC roadmap: five phases from one car on one track to the whole game, what is done, what is in progress and what is planned, plus every release.';
+
+const TOC = [
+  ...PHASES.map((phase) => ({ id: `phase-${phase.n}`, label: `${phase.n}. ${phase.title}` })),
+  { id: 'later', label: 'Later' },
+  { id: 'changelog', label: 'Changelog' },
+];
 ---
 
-<Base title="Progress" description="What rustyAC can do today. This page is being written." noindex>
-  <StubPage title="Progress">This page is being written. The homepage has the short version of what works today.</StubPage>
-</Base>
+<Page
+  title="Progress"
+  intro="The plan, phase by phase: what is done, what is being worked on and what comes next. A plan, not a promise."
+  description={description}
+  toc={TOC}
+>
+  <div class="note card">
+    <p class="note__big">{PROGRESS_NOTE.text}</p>
+    <p class="muted">{PROGRESS_NOTE.detail}</p>
+  </div>
+
+  {
+    PHASES.map((phase) => (
+      <>
+        <h2 id={`phase-${phase.n}`} class="phase">
+          <span class="phase__n mono">Phase {phase.n}</span>
+          <span>{phase.title}</span>
+          <span class={`pill pill--${phase.status}`}>{STATUS_TEXT[phase.status]}</span>
+        </h2>
+        <p>{phase.intro}</p>
+        <ul class="tasks">
+          {phase.tasks.map((task) => {
+            // a report is linked once its version is out, so nothing points at a file that is not pushed yet
+            const out = !task.version || released.has(task.version);
+            return (
+              <li class="task">
+                <span class={`pill pill--${task.status} task__status`}>{STATUS_TEXT[task.status]}</span>
+                <div class="task__body">
+                  <h3 class="task__title">{task.title}</h3>
+                  <p class="muted">{task.detail}</p>
+                </div>
+                <p class="task__meta mono">
+                  {task.version && <span>{task.version}</span>}
+                  {task.version && !out && <span class="muted">not released yet</span>}
+                  {task.report && out && (
+                    <a href={reportUrl(task.report)} rel="noopener">
+                      report
+                    </a>
+                  )}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+      </>
+    ))
+  }
+
+  <h2 id="later">Later</h2>
+  <p>Side quests for after the plain game works. No dates.</p>
+  <ul>
+    {LATER.map((item) => <li>{item}</li>)}
+  </ul>
+
+  <h2 id="changelog">Changelog</h2>
+  <p>
+    Every release, newest first. The builds are on <a href={LINKS.releases} rel="noopener">GitHub</a>; the newest one
+    is on the <a href="/download">download page</a>.
+  </p>
+  <Changelog releases={all} />
+</Page>
+
+<style>
+  .note {
+    display: grid;
+    gap: 6px;
+    padding: clamp(20px, 3vw, 28px);
+    max-width: 44rem;
+  }
+
+  .note__big {
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: clamp(1.375rem, 1.1rem + 1vw, 1.75rem);
+    line-height: 1.2;
+  }
+
+  .phase {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 14px;
+  }
+
+  .phase__n {
+    flex-basis: 100%;
+    font-size: var(--step--1);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+  }
+
+  .tasks {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-width: none;
+    border-top: 1px solid var(--line);
+  }
+
+  .task {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr) auto;
+    gap: 6px 20px;
+    align-items: baseline;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .task__body {
+    display: grid;
+    gap: 2px;
+  }
+
+  .task__title {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: 0;
+  }
+
+  .task__body p {
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  .task__meta {
+    display: flex;
+    gap: 12px;
+    font-size: var(--step--1);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 719.98px) {
+    .task {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .task__status {
+      grid-column: 1;
+    }
+
+    .task__meta {
+      grid-column: 2;
+      grid-row: 1;
+      justify-self: end;
+    }
+
+    .task__body {
+      grid-column: 1 / -1;
+    }
+  }
+</style>
