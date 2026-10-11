@@ -1,9 +1,226 @@
 ---
-// Placeholder page so no link is dead. Task 04 replaces it.
-import Base from '../layouts/Base.astro';
-import StubPage from '../components/StubPage.astro';
+// The explainer around the browser preview. The preview itself is rustyAC's own site, unpacked into
+// public/play/app/ by scripts/fetch-web-preview.mjs before the build; this page links to it.
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import Page from '../layouts/Page.astro';
+import Icon from '../components/Icon.astro';
+import ImageFigure from '../components/ImageFigure.astro';
+import webSpa from '../assets/screenshots/web_spa.webp';
+import { LINKS } from '../lib/site';
+import { getLatestRelease } from '../lib/release';
+
+const latest = await getLatestRelease();
+
+// VERSION is written by the fetch script next to the unpacked site. No file: the download never worked.
+const version = existsSync('public/play/app/index.html')
+  ? (await readFile('public/play/app/VERSION', 'utf8').catch(() => '')).trim()
+  : '';
+const available = version !== '';
+
+const description =
+  "Try rustyAC in your browser: the same physics compiled to WebAssembly, bit-exact with the desktop build. You open your own Assetto Corsa folder; nothing is uploaded.";
+
+const TOC = [
+  { id: 'what', label: 'What it is' },
+  { id: 'need', label: 'What you need' },
+  { id: 'privacy', label: 'Your files stay with you' },
+  { id: 'controls', label: 'Controls' },
+];
+
+// rustyAC docs/web.md, "Keys and pad"
+const CONTROLS: [string, string, string][] = [
+  ['Throttle, brake', 'Up / W, Down / S', 'RT, LT'],
+  ['Steer', 'Left / A, Right / D', 'left stick'],
+  ['Gear up, down', 'Space / E, Left Ctrl / Q', 'Y, X'],
+  ['Clutch, handbrake', 'Left Shift, B', 'A, RB'],
+  ['DRS, KERS / ERS', 'F, K', 'LB, B'],
+  ['Traction control up, down', 'T, Shift+T', 'D-pad up, down'],
+  ['ABS up, down', 'Y, Shift+Y', 'Back held + D-pad up, down'],
+  ['Brake bias forward, rearward', '], [', 'D-pad right, left'],
+  ['Back to the pits', 'R', 'Back, a tap'],
+  ['Back onto the track', 'Shift+R', 'Back, held 0.6 s and let go'],
+  ['Next view', 'F1 or C', 'right stick press'],
+  ['New car, automatic gearbox', 'N, G', ''],
+  ['Pause, menu, the key list', 'P, Esc, H', 'Start'],
+];
 ---
 
-<Base title="Play" description="Try rustyAC in your browser. This page is being written." noindex>
-  <StubPage title="Play">This page is being written. The browser preview will live here.</StubPage>
-</Base>
+<Page
+  title="Play in your browser"
+  intro="The same physics as the desktop build, compiled to WebAssembly and running in a browser tab. It is a preview."
+  description={description}
+  toc={TOC}
+>
+  <section class="launch card">
+    {
+      available ? (
+        <>
+          <div class="launch__desktop">
+            <a class="btn btn--primary launch__btn" href="/play/app/">
+              Launch the preview
+              <Icon name="arrow" />
+            </a>
+            <p class="mono muted launch__meta">rustyAC {version} · Chrome or Edge · your own Assetto Corsa folder</p>
+          </div>
+          <div class="launch__phone">
+            <p class="launch__title">Open this on a computer.</p>
+            <p class="muted">
+              The preview needs a keyboard or a gamepad, and the Assetto Corsa folder on your computer. It does not
+              run on a phone.
+            </p>
+          </div>
+        </>
+      ) : (
+        <div>
+          <p class="launch__title">The preview is unavailable right now.</p>
+          <p class="muted">
+            You can still get it from the <a href={latest.url} rel="noopener">latest release</a>: download the
+            <code>-web.zip</code>, unpack it and serve the folder from your own computer.
+          </p>
+        </div>
+      )
+    }
+  </section>
+
+  <ImageFigure
+    src={webSpa}
+    alt="The browser preview: a Ferrari F2004 seen from behind on the track at Spa, with the lap time, gear, speed and revs on the display"
+    caption="The preview in Chrome: the F2004 at Spa, 60 frames and 333 physics steps a second."
+    sizes="(min-width: 1184px) 856px, (min-width: 1024px) calc(100vw - 328px), (min-width: 640px) calc(100vw - 48px), calc(100vw - 32px)"
+  />
+
+  <h2 id="what">What it is</h2>
+  <!-- rustyAC docs/web.md intro; docs/port/web.md section 3.2 (160 drives, 1,787,777 steps) and the self-test (10,000 steps, three car and track pairs) -->
+  <p>
+    The preview is rustyAC's physics, the same Rust code as the desktop build, compiled to WebAssembly. It is
+    bit-exact with the desktop: 160 recorded drives (1,787,777 physics steps) were replayed through the WebAssembly
+    build and every step matched. In the browser itself, a 10,000-step test drive on three car and track pairs ends
+    in the same state as on the desktop.
+  </p>
+  <h3>What it is not</h3>
+  <!-- docs/web.md intro; docs/port/web.md section 7 "What is missing" -->
+  <ul>
+    <li><strong>No sound.</strong></li>
+    <li>
+      <strong>A simple picture.</strong> It is a small renderer of its own (WebGPU, or WebGL2 where the browser has no
+      WebGPU), not Assetto Corsa's: no shadows, no reflections, no sky.
+    </li>
+    <li><strong>One car on the track.</strong> Picking another car or track reloads the page.</li>
+    <li>No wheel and no force feedback. Your own key bindings and saved setups are not read.</li>
+  </ul>
+
+  <h2 id="need">What you need</h2>
+  <!-- docs/web.md "Try it on this computer" and "How the page copes with a 441 MB file"; docs/port/web.md section 7 -->
+  <ul>
+    <li><strong>Chrome or Edge on a computer.</strong> Other browsers were not tried.</li>
+    <li>
+      <strong>Your own Assetto Corsa folder</strong>, the one with <code>content</code> and <code>system</code> in it
+      (<code>...\steamapps\common\assettocorsa</code>). The site holds no Assetto Corsa file.
+    </li>
+    <li>
+      <strong>Enough memory for the track.</strong> A big track needs about 1 to 1.5 GB in the tab while it loads. A
+      computer with 4 GB may not manage Spa or Laguna Seca; a smaller track will do there.
+    </li>
+  </ul>
+  <p>
+    In the preview: open your folder, pick a car and a track, press <strong>Drive</strong>. The same cars and tracks
+    load as on the desktop (<a href="/compatibility">the list</a>).
+  </p>
+
+  <h2 id="privacy">Your files stay with you</h2>
+  <!-- docs/web.md intro and its last paragraph; docs/port/web.md section 4.4 (the folder handle in IndexedDB); the preview's own app.js -->
+  <ul>
+    <li>
+      You pick your Assetto Corsa folder in the browser's own folder dialog. The page then reads the files it needs
+      straight from your disk, on your computer. <strong>Nothing is uploaded</strong> and nothing in the folder is
+      changed.
+    </li>
+    <li>
+      rustyac.com serves the preview's own files (a page, a script and the WebAssembly program) and nothing else. It
+      never receives your game's files.
+    </li>
+    <li>
+      Your browser remembers <em>which folder</em> you picked, in its own storage for this site, so the next visit
+      needs one click at most. Chrome and Edge ask for permission once more on the next visit, unless you allowed the
+      site on every visit. The game's files themselves are not copied anywhere.
+    </li>
+  </ul>
+
+  <h2 id="controls">Controls</h2>
+  <!-- docs/web.md "Keys and pad" -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th></th><th>Keyboard</th><th>Xbox pad</th></tr>
+      </thead>
+      <tbody>
+        {
+          CONTROLS.map(([what, keys, pad]) => (
+            <tr>
+              <td>{what}</td>
+              <td class="mono">{keys}</td>
+              <td class="mono">{pad}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+  <p>
+    Left Shift is also the clutch, so use Right Shift for Shift+T and Shift+Y while moving. <kbd>]</kbd> and
+    <kbd>[</kbd> are the two keys right of P. Keys pressed with Ctrl or Alt are left to the browser.
+  </p>
+  <p>
+    Something broke? Tell us in the <a href={LINKS.discord} rel="noopener">Discord</a>. The full build is the
+    <a href="/download">Windows download</a>.
+  </p>
+</Page>
+
+<style>
+  .launch {
+    display: grid;
+    gap: 12px;
+    padding: clamp(22px, 3vw, 32px);
+    max-width: 44rem;
+  }
+
+  .launch__desktop {
+    display: grid;
+    justify-items: start;
+    gap: 12px;
+  }
+
+  .launch__btn {
+    min-height: 52px;
+    padding: 0 24px;
+    font-size: 1.0625rem;
+  }
+
+  .launch__meta {
+    font-size: var(--step--1);
+  }
+
+  .launch__title {
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: 1.375rem;
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+
+  .launch__phone {
+    display: none;
+  }
+
+  /* the same rule the homepage uses to skip its 3D scene on phones (F2004Scene.astro) */
+  @media (pointer: coarse) and (max-width: 900px) {
+    .launch__desktop {
+      display: none;
+    }
+
+    .launch__phone {
+      display: block;
+    }
+  }
+</style>
