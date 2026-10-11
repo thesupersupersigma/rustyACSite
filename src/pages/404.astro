@@ -1,8 +1,31 @@
 ---
 import Base from '../layouts/Base.astro';
-import StubPage from '../components/StubPage.astro';
+import Icon from '../components/Icon.astro';
+import { LINKS } from '../lib/site';
 ---
 
 <Base title="Page not found" description="This page does not exist on rustyac.com." noindex>
-  <StubPage title="Page not found">There is nothing at this address.</StubPage>
+  <section class="lost wrap">
+    <p class="eyebrow">404</p>
+    <h1>Page not found</h1>
+    <p class="lede">There is nothing at this address.</p>
+    <div class="btn-row">
+      <a class="btn" href="/">Back to the homepage</a>
+      <a class="btn" href={LINKS.github} rel="noopener"><Icon name="github" />GitHub</a>
+    </div>
+  </section>
 </Base>
+
+<style>
+  .lost {
+    display: grid;
+    justify-items: start;
+    align-content: start;
+    gap: 20px;
+    padding-block: clamp(72px, 14vh, 160px);
+  }
+
+  .lost h1 {
+    font-size: clamp(2rem, 1.4rem + 3vw, 3.25rem);
+  }
+</style>

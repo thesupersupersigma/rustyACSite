@@ -5,13 +5,15 @@ import { readdir, readFile, rm, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-// Stub pages (replaced in task 04) stay out of the sitemap until they have real content.
-const STUBS = ['/download/', '/play/', '/how-it-works/', '/progress/', '/devlog/'];
+// Pages that stay out of the sitemap: the hidden page and the error page. Devlog drafts need no entry
+// here, because a draft is not built at all.
+const NOT_IN_SITEMAP = ['/what-next/', '/404/'];
 
 /**
  * Astro copies every imported source image into dist/_astro/ next to the AVIF/WebP sizes it makes
- * from it. The pages only link to the generated sizes, so the 2560x1440 PNG sources (about 31 MB)
- * would ship as dead weight. This removes the PNGs that no built page, script or stylesheet names.
+ * from it. The pages only link to the generated sizes, so the 2560x1440 sources (about 31 MB of PNG,
+ * 9 MB of WebP) would ship as dead weight. This removes the PNG and WebP files that no built page,
+ * script or stylesheet names.
  * @returns {import('astro').AstroIntegration}
  */
 function pruneUnusedSources() {
@@ -36,7 +38,7 @@ function pruneUnusedSources() {
         let bytes = 0;
         let count = 0;
         for (const name of await readdir(assets).catch(() => [])) {
-          if (!name.endsWith('.png') || everything.includes(name)) continue;
+          if (!/\.(png|webp)$/.test(name) || everything.includes(name)) continue;
           const file = path.join(assets, name);
           bytes += (await stat(file)).size;
           count++;
@@ -53,7 +55,7 @@ export default defineConfig({
   output: 'static',
   integrations: [
     sitemap({
-      filter: (page) => !STUBS.some((stub) => new URL(page).pathname === stub),
+      filter: (page) => !NOT_IN_SITEMAP.some((hidden) => new URL(page).pathname.replace(/\/?$/, '/') === hidden),
     }),
     pruneUnusedSources(),
   ],

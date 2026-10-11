@@ -24,6 +24,7 @@ export const NAV: NavLink[] = [
   { label: 'How it works', href: '/how-it-works' },
   { label: 'Progress', href: '/progress' },
   { label: 'Devlog', href: '/devlog' },
+  { label: 'FAQ', href: '/faq' },
   { label: 'Docs', href: LINKS.docs, external: true },
 ];
 

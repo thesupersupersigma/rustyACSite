@@ -1,0 +1,35 @@
+---
+import Page from '../layouts/Page.astro';
+import { FAQ } from '../data/faq';
+
+const description =
+  'Short answers about rustyAC: whether it is official, what you need, Custom Shaders Patch, mods, multiplayer, AI, menus, Mac and Linux, and how to help.';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ.flatMap((group) => group.items).map((item) => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: { '@type': 'Answer', text: item.text },
+  })),
+};
+---
+
+<Page title="FAQ" intro="Short answers. Each one opens." description={description} jsonLd={jsonLd}>
+  {
+    FAQ.map((group) => (
+      <>
+        <h2>{group.title}</h2>
+        <div class="fold-list">
+          {group.items.map((item) => (
+            <details class="fold" id={item.id}>
+              <summary>{item.question}</summary>
+              <div class="fold__body" set:html={item.html} />
+            </details>
+          ))}
+        </div>
+      </>
+    ))
+  }
+</Page>
