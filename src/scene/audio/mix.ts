@@ -139,7 +139,7 @@ export function engineMix(rpms: readonly number[], rpm: number, throttle: number
   return out;
 }
 
-/** Gain (before WHEELSPIN_DB) and pitch of the tyre squeal for a rear wheel speed of 0 to 1. */
+/** Gain (before WHEELSPIN_GAIN) and pitch of the tyre squeal for a rear wheel speed of 0 to 1. */
 export function wheelspinMix(wheelNorm: number, out: { gain: number; rate: number }): { gain: number; rate: number } {
   const n = clamp(Number.isFinite(wheelNorm) ? wheelNorm : 0, 0, 1);
   out.gain = clamp((n - AUDIO.WHEELSPIN_START) / (AUDIO.WHEELSPIN_FULL - AUDIO.WHEELSPIN_START), 0, 1);

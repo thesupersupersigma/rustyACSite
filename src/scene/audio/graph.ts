@@ -208,7 +208,7 @@ export class SoundGraph {
     this.aim(this.loopsBus.gain, engine.loops, t, PARAM);
     this.aim(this.limiter.gain.gain, engine.limiter, t, PARAM);
 
-    this.aim(this.wheelspin.gain.gain, frame.wheelspin.gain * dbToGain(AUDIO.WHEELSPIN_DB), t, WHEELSPIN);
+    this.aim(this.wheelspin.gain.gain, frame.wheelspin.gain * dbToGain(AUDIO.WHEELSPIN_GAIN), t, WHEELSPIN);
     if (this.wheelspin.source) this.aim(this.wheelspin.source.playbackRate, frame.wheelspin.rate, t, WHEELSPIN);
 
     if (this.carPan) this.aim(this.carPan.pan, space.car, t, SPACE);
@@ -246,7 +246,7 @@ export class SoundGraph {
         if (!buffer) break;
         const rate = 1 + (this.random() * 2 - 1) * AUDIO.PIT_PITCH_SPREAD;
         const at = t + this.random() * AUDIO.PIT_OFFSET_MAX;
-        this.play(buffer, at, rate, dbToGain(AUDIO.PIT_DB), this.panned(space.wheels[wheel] ?? 0));
+        this.play(buffer, at, rate, dbToGain(AUDIO.PIT_GAIN), this.panned(space.wheels[wheel] ?? 0));
         break;
       }
       case 'pitstop:end':

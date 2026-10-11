@@ -37,8 +37,8 @@ export const AUDIO = {
   PARAM_SECONDS: 0.04,
 
   // ---- wheelspin -----------------------------------------------------------------------------
-  /** Level of the tyre squeal. The game's mix has it about 20 dB under the engine; on the site it sells the burnout. */
-  WHEELSPIN_DB: 9,
+  /** Level of the tyre squeal, in dB. The game's mix has it about 20 dB under the engine; on the site it sells the burnout. */
+  WHEELSPIN_GAIN: 9,
   /** Rear wheel speed (share of the top speed) where the squeal starts, and where it is at full level. */
   WHEELSPIN_START: 0.04,
   WHEELSPIN_FULL: 0.55,
@@ -93,8 +93,8 @@ export const AUDIO = {
   HISS_SECONDS: 0.7,
 
   // ---- pit stop ------------------------------------------------------------------------------
-  /** Level of the wheel guns (the clips are quiet). */
-  PIT_DB: 12,
+  /** Level of the wheel guns, in dB (the clips are quiet). */
+  PIT_GAIN: 12,
   /** Each gun starts up to this many seconds late, so four guns do not sound like one. */
   PIT_OFFSET_MAX: 0.06,
   /** Each gun's pitch is off by up to this share either way (0.04 = 4%). */
