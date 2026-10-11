@@ -30,7 +30,27 @@ The old Monza pair was two different sizes (1152×648 and 1024×576); the new pa
 | `public/og/rustyac-og.webp` | `og_burnout.png` + `src/assets/logo-mark.png` + the wordmark | `npm run og` (`scripts/make-brand.mjs`) | `src/layouts/Base.astro`: `og:image` and `twitter:image` on every page | 1200×630, 129 KB |
 | `dist/_astro/renderer_core_*.avif` and `.webp` | the six slider pictures | `astro build` (`astro:assets`, `<Picture>` in `CompareSlider.astro`) | the `srcset` of the slider | 640, 960, 1280, 1920 and 2560 wide, AVIF with a WebP fallback |
 
-### Captured but not on the site yet
+### Stored as WebP (task 04)
+
+The hero and gallery pictures are stored in `src/assets/screenshots/` as **WebP at quality 92**, not
+PNG (about 0.6 to 1.3 MB each instead of 4.5 to 7.2 MB). `node scripts/use-screenshots.mjs --webp`
+makes them from `assets-src/media/screenshots/*.png` and leaves the PNGs and the share image alone.
+
+| Site file | Source | Used in |
+|---|---|---|
+| `hero_burnout.webp` | `assets-src/media/screenshots/hero_burnout.png` | `/download` (beside the button, and its share image) |
+| `gallery_f2004_spa_chase.webp` | `gallery_f2004_spa_chase.png` | `/how-it-works` |
+| `gallery_f2004_cockpit.webp` | `gallery_f2004_cockpit.png` | `/how-it-works` |
+| `gallery_f2004_spa_trackside.webp` | `gallery_f2004_spa_trackside.png` | `/how-it-works` share image; cover of a devlog draft |
+| `gallery_488_gt3_laguna_seca.webp` | `gallery_488_gt3_laguna_seca.png` | `/compatibility` |
+| `gallery_heavy_clouds.webp`, `gallery_night_lights.webp` | the PNGs of the same name | covers of devlog drafts (not built while they are drafts) |
+| `gallery_crash_damage.webp`, `gallery_f40_monza.webp` | the PNGs of the same name | not used yet |
+| `web_spa.webp` | rustyAC `docs/port/web_spa.png` (1024×576; the copy in `assets-src/screenshots/`) | `/play`; cover of a devlog draft |
+
+Pages show them through `src/components/ImageFigure.astro` (AVIF and WebP at 640 to 2560 px wide,
+lazy). The build deletes the source files from `dist/` when no page links to them.
+
+### Captured but not on the site yet (written in task 02; see the table above for what task 04 uses)
 
 These are in `assets-src/media/screenshots/` and nothing uses them (no page for them exists yet;
 task 04): `hero_burnout.png` and the eight `gallery_*.png` (`gallery_488_gt3_laguna_seca`,
