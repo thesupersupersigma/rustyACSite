@@ -3,8 +3,8 @@
 //
 // The burnout (hold to rev, smoke, pop, pit stop) lives in burnout.ts and is driven from the frame
 // loop here. Task 03 hooks in through the object `createF2004Scene` resolves to (see F2004Scene in
-// types.ts): `engine`, `events`, `getCar()`, `getStartLights()`, `onFrame(cb)` and `p`. Nothing
-// here makes a sound.
+// types.ts): `engine`, `events`, `getCar()`, `getStartLights()`, `onFrame(cb)` and `p`. The sound
+// (task 03) is in audio/; it stays silent, and downloads nothing, until the visitor turns it on.
 import {
   ACESFilmicToneMapping,
   BackSide,
@@ -97,11 +97,11 @@ function findCarNodes(car: Object3D): CarNodes {
     }
     return out;
   };
-  const nodes: CarNodes = { root, hubs: pick('hub'), wheels: pick('wheel'), nuts: pick('nut') };
+  const nodes: CarNodes = { root, hubs: pick('hub'), wheels: pick('wheel'), nuts: pick('nut'), rotors: pick('rotor') };
   if (missing.length > 0) {
     console.error(
       `[f2004] f2004.glb is missing ${missing.length} wheel node(s): ${missing.join(', ')}. ` +
-        'The burnout and pit stop need hub_XX, wheel_XX and nut_XX for FL, FR, RL and RR. ' +
+        'The burnout and pit stop need hub_XX, wheel_XX, nut_XX and rotor_XX for FL, FR, RL and RR. ' +
         'Re-export the model with --flatten false --join false (see brainstorm.md 1.19).',
     );
   }
@@ -417,6 +417,7 @@ async function buildScene(
     startLights: track.startLights,
     rig,
     container,
+    assetVersion: options.assetVersion,
     groundLayer: mirrorHidden,
     getTier: () => quality.tier,
     getReducedMotion: () => reducedMotion,
@@ -565,6 +566,7 @@ async function buildScene(
     engine: burnout.engine,
     events: burnout.events,
     sim: burnout.hooks,
+    sound: burnout.sound.hooks,
     getCar: () => carNodes,
     getStartLights: () => track.startLights,
     onFrame(cb) {

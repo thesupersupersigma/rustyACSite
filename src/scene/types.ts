@@ -17,6 +17,8 @@ export interface CarNodes {
   wheels: Record<WheelId, Object3D>;
   /** `nut_XX`: the centre-lock nut; slide along local X to undo it. */
   nuts: Record<WheelId, Object3D>;
+  /** `rotor_XX`: the brake disc, under the hub. Spins with the wheel but stays on the car in the pit stop. */
+  rotors: Record<WheelId, Object3D>;
 }
 
 export interface FrameInfo {
@@ -106,6 +108,33 @@ export interface BenchResult {
   drawSmokeNotMirroredMs: number;
 }
 
+/**
+ * The speaker button's state. `armed`: sound was on during the last visit and starts with the first
+ * press of the rev button or the speaker (a browser will not let it start by itself).
+ */
+export type SoundState = 'off' | 'armed' | 'loading' | 'on';
+
+/** The scripted burnout rendered to a file (see audio/offline.ts). */
+export interface SoundRun {
+  /** A 16-bit stereo WAV file. */
+  wav: Uint8Array;
+  seconds: number;
+  sampleRate: number;
+  /** The clip format this browser decoded: `webm` or `m4a`. */
+  format: string;
+  /** Where each part of the run starts, in seconds. */
+  marks: Array<{ label: string; time: number }>;
+}
+
+/** The sound (`window.__f2004.sound`). */
+export interface SoundHooks {
+  state(): SoundState;
+  /** What a click on the speaker button does. Turning sound on has to happen inside a click or key press. */
+  toggle(): void;
+  /** Renders the scripted run without playing it. Takes over the burnout's clock while it records. */
+  renderRun(): Promise<SoundRun>;
+}
+
 /** What the homepage and tasks 02/03 get back from `createF2004Scene`. */
 export interface F2004Scene {
   /** Current scroll progress through the section, 0 to 1. */
@@ -122,6 +151,8 @@ export interface F2004Scene {
   readonly events: BurnoutEvents;
   /** Deterministic test hooks. */
   readonly sim: SimHooks;
+  /** The sound switch and the offline render. */
+  readonly sound: SoundHooks;
   setProgress(p: number): void;
   setReducedMotion(on: boolean): void;
   dispose(): void;

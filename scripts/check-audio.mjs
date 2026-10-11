@@ -55,8 +55,7 @@ async function checkInPage() {
   const RATE = 48000;
   const MAX_LAG = 4096;
   const manifest = await (await fetch('/manifest.json')).json();
-  const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-  const ctx = new Offline(2, RATE, RATE);
+  const ctx = new OfflineAudioContext(2, RATE, RATE);
   const decodeUrl = async (url) => {
     const bytes = await (await fetch(url)).arrayBuffer();
     // the callback form works in every browser, old Safari included

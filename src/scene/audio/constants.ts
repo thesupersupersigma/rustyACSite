@@ -11,12 +11,15 @@ export const AUDIO = {
   MASTER_DB: -3,
   /** Nothing leaves the page louder than this (dBFS). A hard ceiling after the compressor. */
   CEILING_DB: -1,
-  /** The safety compressor: where it starts to work (dBFS) and how hard (12 = 12 dB in for 1 dB out). */
-  COMP_THRESHOLD_DB: -9,
-  COMP_RATIO: 12,
+  /**
+   * The safety compressor: where it starts to work (dBFS) and how hard (20 = 20 dB in for 1 dB out).
+   * The engine flat out peaks around -8 dBFS, so it only catches the tyre burst and stacked sounds.
+   */
+  COMP_THRESHOLD_DB: -3,
+  COMP_RATIO: 20,
   /** Seconds the compressor takes to clamp down, and to let go. */
-  COMP_ATTACK: 0.003,
-  COMP_RELEASE: 0.15,
+  COMP_ATTACK: 0.002,
+  COMP_RELEASE: 0.12,
   /** Seconds of fade when sound goes on or off (the toggle, scrolling away, hiding the tab). */
   FADE_SECONDS: 0.15,
 
@@ -68,8 +71,8 @@ export const AUDIO = {
 
   // ---- the tyre burst (made in code: the game has no such sound) --------------------------------
   /** Loudness of the whole burst. */
-  BURST_DB: -2,
-  /** Seconds between the two tyres letting go, and how far apart they sit between the speakers (0 to 1). */
+  BURST_DB: 3,
+  /** Seconds between the two tyres letting go, and how far left and right of the car they sit (0 to 1). */
   BURST_GAP: 0.04,
   BURST_SPREAD: 0.55,
   /** The crack: seconds of noise, its high-pass, and the low-pass sweeping down from / to (Hz). */

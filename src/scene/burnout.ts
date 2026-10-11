@@ -22,6 +22,7 @@ import {
   type PerspectiveCamera,
   type Scene,
 } from 'three';
+import { Sound } from './audio/sound';
 import { Controls } from './controls';
 import { Debris } from './debris';
 import { Emitter } from './events';
@@ -121,6 +122,8 @@ export interface BurnoutContext {
   rig: CameraRig;
   /** The element the controls are added to (the frame the canvas fills). */
   container: HTMLElement;
+  /** Appended as `?v=` to the audio URLs. */
+  assetVersion: string;
   /** Objects lying on the tarmac; they are hidden while the mirror image is drawn. */
   groundLayer: Object3D[];
   getTier(): Tier;
@@ -267,6 +270,7 @@ export class Burnout {
   readonly events = new Emitter();
   readonly engine: EngineReadout;
   readonly hooks: SimHooks;
+  readonly sound: Sound;
 
   private readonly ctx: BurnoutContext;
   private readonly sim = new BurnoutSim();
@@ -289,6 +293,8 @@ export class Burnout {
   private readonly hubNodes: Object3D[] = [];
   private readonly wheelNodes: Object3D[] = [];
   private readonly nutNodes: Object3D[] = [];
+  /** The brake discs: they turn with the wheels but stay on the hubs when the wheels come off. */
+  private readonly rotorNodes: Object3D[] = [];
   /** +1 on the car's left, -1 on its right: the way a wheel or nut comes off. */
   private readonly wheelSide: number[] = [];
   private readonly wheelFront: boolean[] = [];
@@ -391,6 +397,7 @@ export class Burnout {
       this.hubNodes.push(car.hubs[id]);
       this.wheelNodes.push(car.wheels[id]);
       this.nutNodes.push(car.nuts[id]);
+      this.rotorNodes.push(car.rotors[id]);
       this.wheelSide.push(sideOf(id));
       this.wheelFront.push(!rear);
       this.hubBaseY.push(car.hubs[id].position.y);
@@ -539,6 +546,16 @@ export class Burnout {
       bench: (frames = 30) => this.bench(frames),
     };
 
+    this.sound = new Sound({
+      controls: this.controls,
+      events: this.events,
+      engine: this.engine,
+      sim: this.hooks,
+      camera: ctx.camera,
+      car,
+      assetVersion: ctx.assetVersion,
+    });
+
     this.apply();
   }
 
@@ -547,6 +564,7 @@ export class Burnout {
     this.setProgress(p);
     if (!this.manual) this.advance(dt, this.controls.held);
     this.apply();
+    this.sound.update(dt);
   }
 
   /**
@@ -555,7 +573,9 @@ export class Burnout {
    * frame loop stops when the section is off screen, and Space has to go back to the page then.
    */
   setProgress(p: number): void {
-    this.controls.setStage(p >= 0.2 && p <= 0.8);
+    const stage = p >= 0.2 && p <= 0.8;
+    this.controls.setStage(stage);
+    this.sound.setStage(stage);
   }
 
   /** Shows the parts that are normally hidden, so the first frame can compile their shaders. */
@@ -584,11 +604,13 @@ export class Burnout {
       `rpm    ${s.rpm.toFixed(0)}${s.limiter ? ' LIM' : ''}\n` +
       `thr    ${s.throttle}\n` +
       `heat   ${s.heat.toFixed(2)}\n` +
-      `smoke  ${this.smoke.alive} / ${SMOKE.CAP[this.ctx.getTier()]}`
+      `smoke  ${this.smoke.alive} / ${SMOKE.CAP[this.ctx.getTier()]}\n` +
+      this.sound.debugText()
     );
   }
 
   dispose(): void {
+    this.sound.dispose();
     this.controls.dispose();
     this.events.clear();
     this.ctx.rig.setShake(0);
@@ -790,6 +812,8 @@ export class Burnout {
     const angle = this.wheelAngle;
     (this.wheelNodes[2] as Object3D).rotation.x = angle;
     (this.wheelNodes[3] as Object3D).rotation.x = angle;
+    (this.rotorNodes[2] as Object3D).rotation.x = angle;
+    (this.rotorNodes[3] as Object3D).rotation.x = angle;
     this.blurMaterial.opacity = blur * LOOK.BLUR_OPACITY;
     for (let i = 0; i < this.blurDiscs.length; i++) (this.blurDiscs[i] as Mesh).visible = blur > 0.01;
     this.smear.value = blur * LOOK.SMEAR;

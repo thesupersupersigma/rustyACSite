@@ -1,9 +1,10 @@
 // The stage controls: the round "Hold to rev" button (which turns into "Pit stop" after the pop), the
-// first-time hint, the pit-stop timer and the screen-reader announcements. Built here, in the scene
+// speaker button next to it, the first-time hint, the pit-stop timer and the screen-reader announcements. Built here, in the scene
 // chunk, so the homepage carries none of it for visitors who never get the scene.
 //
-// This file only reports what the visitor is doing (`held`, `onPitStop`); burnout.ts decides what
-// that means.
+// This file only reports what the visitor is doing (`held`, `onPitStop`, `onSound`); burnout.ts and
+// audio/sound.ts decide what that means.
+import type { SoundState } from './types';
 
 export type ControlMode = 'rev' | 'pit' | 'busy';
 
@@ -95,6 +96,42 @@ const CSS = /* css */ `
   transition: opacity 0.5s linear;
 }
 .rev__timer.is-on { opacity: 1; transition-duration: 0.1s; }
+.rev__sound {
+  position: absolute;
+  /* beside the round button, level with its middle */
+  left: calc(50% + 52px + 14px);
+  bottom: 30px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(14 14 14 / 0.7);
+  color: rgb(245 245 245 / 0.66);
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.2s linear, color 0.2s linear;
+}
+.rev__sound:hover { background: rgb(14 14 14 / 0.84); color: #f5f5f5; }
+.rev__sound.is-on { color: #f5f5f5; }
+.rev__sound svg { width: 22px; height: 22px; pointer-events: none; }
+.rev__sound .rev__waves { display: none; }
+.rev__sound:not(.is-off) .rev__waves { display: inline; }
+.rev__sound:not(.is-off) .rev__mute { display: none; }
+/* loading: a ring that fills as the clips arrive (no spinning, so it is fine with reduced motion) */
+.rev__sound.is-loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(#d2581f calc(var(--sound-load, 0) * 1turn), rgb(245 245 245 / 0.22) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
+  pointer-events: none;
+}
 .rev__live {
   position: absolute;
   width: 1px;
@@ -107,7 +144,7 @@ const CSS = /* css */ `
   border: 0;
 }
 @media (prefers-reduced-motion: reduce) {
-  .rev__btn, .rev__hint, .rev__timer { transition: none; }
+  .rev__btn, .rev__hint, .rev__timer, .rev__sound { transition: none; }
 }
 `;
 
@@ -117,6 +154,14 @@ const SWALLOW_MS = 450;
 const PIT_KEY_DELAY_MS = 600;
 
 const LABEL: Record<ControlMode, string> = { rev: 'Hold to rev', pit: 'Pit stop', busy: 'Pit stop' };
+
+/** The speaker button per state: its accessible name, whether it counts as pressed, and its tooltip. */
+const SOUND: Record<SoundState, { label: string; pressed: boolean; title: string }> = {
+  off: { label: 'Sound off', pressed: false, title: 'Turn sound on' },
+  armed: { label: 'Sound on', pressed: true, title: 'Sound starts with your first rev' },
+  loading: { label: 'Sound on', pressed: true, title: 'Loading the sound' },
+  on: { label: 'Sound on', pressed: true, title: 'Turn sound off' },
+};
 
 function isOtherControl(el: Element | null, own: Element): boolean {
   if (!el || el === own || el === document.body || el === document.documentElement) return false;
@@ -128,6 +173,10 @@ export class Controls {
   held = false;
   /** Called when the visitor asks for the pit stop. */
   onPitStop: (() => void) | undefined;
+  /** Called when the visitor clicks the speaker button. */
+  onSound: (() => void) | undefined;
+  /** Called, still inside the key or pointer event, when a hold starts or the round button is clicked. */
+  onPress: (() => void) | undefined;
 
   private mode: ControlMode = 'rev';
   private inStage = false;
@@ -148,6 +197,7 @@ export class Controls {
   private readonly root: HTMLDivElement;
   private readonly style: HTMLStyleElement;
   private readonly button: HTMLButtonElement;
+  private readonly soundButton: HTMLButtonElement;
   private readonly label: HTMLSpanElement;
   private readonly fill: SVGCircleElement;
   private readonly hint: HTMLParagraphElement;
@@ -173,6 +223,12 @@ export class Controls {
       '<svg class="rev__ring" viewBox="0 0 104 104" aria-hidden="true" focusable="false">' +
       '<circle class="rev__track" cx="52" cy="52" r="46"/><circle class="rev__fill" cx="52" cy="52" r="46"/>' +
       '</svg><span class="rev__label">Hold to rev</span></button>' +
+      '<button class="rev__sound is-off" type="button" aria-pressed="false" aria-label="Sound off" title="Turn sound on">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+      '<path d="M3.5 9.2v5.6h3.9l5 4.1V5.1l-5 4.1z" fill="currentColor"/>' +
+      '<path class="rev__waves" d="M15.6 8.6a4.8 4.8 0 0 1 0 6.8M18.2 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>' +
+      '<path class="rev__mute" d="M16 9.4l5.2 5.2m0-5.2L16 14.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>' +
+      '</svg></button>' +
       '<p class="rev__hint" id="rev-hint">Hold to rev · drag to look around</p>' +
       '<p class="rev__live" aria-live="polite"></p>';
     parent.appendChild(root);
@@ -184,6 +240,7 @@ export class Controls {
       return el;
     };
     this.button = pick<HTMLButtonElement>('.rev__btn');
+    this.soundButton = pick<HTMLButtonElement>('.rev__sound');
     this.label = pick<HTMLSpanElement>('.rev__label');
     this.fill = pick<SVGCircleElement>('.rev__fill');
     this.hint = pick<HTMLParagraphElement>('.rev__hint');
@@ -199,6 +256,8 @@ export class Controls {
     b.addEventListener('contextmenu', this.onContextMenu);
     b.addEventListener('keydown', this.onButtonKeyDown);
     b.addEventListener('blur', this.onButtonBlur);
+    this.soundButton.addEventListener('click', this.onSoundClick);
+    this.soundButton.addEventListener('pointerdown', this.onSoundPointerDown);
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
     window.addEventListener('pointerup', this.onAnyRelease, true);
@@ -214,6 +273,7 @@ export class Controls {
     if (!on) {
       this.releaseAll();
       if (document.activeElement === this.button) this.button.blur();
+      if (document.activeElement === this.soundButton) this.soundButton.blur();
     }
     this.root.hidden = !on;
   }
@@ -232,6 +292,26 @@ export class Controls {
     else b.removeAttribute('aria-pressed');
     if (mode === 'busy') b.setAttribute('aria-disabled', 'true');
     else b.removeAttribute('aria-disabled');
+  }
+
+  /** Shows the speaker button as off, on, loading, or on-but-waiting-for-a-press. */
+  setSound(state: SoundState): void {
+    const b = this.soundButton;
+    const look = SOUND[state];
+    b.classList.toggle('is-off', state === 'off');
+    b.classList.toggle('is-on', state === 'on');
+    b.classList.toggle('is-loading', state === 'loading');
+    b.setAttribute('aria-label', look.label);
+    b.setAttribute('aria-pressed', look.pressed ? 'true' : 'false');
+    b.title = look.title;
+    if (state === 'loading') b.setAttribute('aria-busy', 'true');
+    else b.removeAttribute('aria-busy');
+    if (state !== 'loading') b.style.removeProperty('--sound-load');
+  }
+
+  /** How much of the sound has arrived, 0 to 1 (the ring around the speaker while it loads). */
+  setSoundProgress(fraction: number): void {
+    this.soundButton.style.setProperty('--sound-load', Math.min(1, Math.max(0, fraction)).toFixed(3));
   }
 
   /** Fills the ring: 0 at idle, 1 at the limiter. */
@@ -285,6 +365,7 @@ export class Controls {
     const held = this.mode === 'rev' && this.inStage && (this.pointerId !== -1 || this.spaceDown || this.enterDown);
     if (held === this.held) return;
     this.held = held;
+    if (held) this.onPress?.();
     this.button.classList.toggle('is-held', held);
     if (this.mode === 'rev') this.button.setAttribute('aria-pressed', held ? 'true' : 'false');
   }
@@ -345,7 +426,20 @@ export class Controls {
 
   private readonly onClick = (): void => {
     if (this.swallowClick || performance.now() < this.swallowUntil) return;
+    this.onPress?.();
     if (this.mode === 'pit' && this.inStage) this.onPitStop?.();
+  };
+
+  private readonly onSoundClick = (e: MouseEvent): void => {
+    this.onSound?.();
+    // A mouse or touch click must not leave the focus here, or the next press of Space would switch
+    // the sound instead of revving. A click made with the keyboard (detail 0) keeps its focus.
+    if (e.detail > 0) this.soundButton.blur();
+  };
+
+  private readonly onSoundPointerDown = (e: PointerEvent): void => {
+    // like the round button: a press here is not a camera drag
+    e.stopPropagation();
   };
 
   private readonly onContextMenu = (e: Event): void => {
