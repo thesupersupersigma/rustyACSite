@@ -1,0 +1,57 @@
+---
+// One page per published post. Drafts get no path here, so they are not built.
+import { render } from 'astro:content';
+import Page from '../../layouts/Page.astro';
+import ImageFigure from '../../components/ImageFigure.astro';
+import { coverImage, getPublishedPosts, postDate, readingMinutes, type Post } from '../../lib/devlog';
+import { shareImage } from '../../lib/og';
+import { SITE_URL } from '../../lib/site';
+
+export async function getStaticPaths() {
+  const posts = await getPublishedPosts();
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}
+
+interface Props {
+  post: Post;
+}
+const { post } = Astro.props;
+const { Content } = await render(post);
+
+const cover = coverImage(post.data.cover);
+const coverAlt = post.data.coverAlt ?? '';
+const ogImage = cover ? await shareImage(cover, coverAlt || post.data.title) : undefined;
+const iso = post.data.date.toISOString().slice(0, 10);
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: post.data.title,
+  description: post.data.summary,
+  datePublished: iso,
+  url: new URL(`/devlog/${post.id}`, Astro.site ?? SITE_URL).href,
+  author: { '@type': 'Person', name: 'thesupersupersigma' },
+  ...(ogImage ? { image: new URL(ogImage.src, Astro.site ?? SITE_URL).href } : {}),
+};
+---
+
+<Page
+  title={post.data.title}
+  intro={post.data.summary}
+  description={post.data.summary}
+  parents={[{ name: 'Devlog', href: '/devlog' }]}
+  ogImage={ogImage}
+  jsonLd={jsonLd}
+>
+  <p class="meta mono muted" slot="head">
+    <time datetime={iso}>{postDate(post.data.date)}</time> · {readingMinutes(post.body ?? '')} min read
+  </p>
+  {cover && <ImageFigure src={cover} alt={coverAlt} loading="eager" />}
+  <Content />
+</Page>
+
+<style>
+  .meta {
+    font-size: var(--step--1);
+  }
+</style>
