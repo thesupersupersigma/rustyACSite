@@ -11,6 +11,11 @@ That covers the site's source (`src/`, `scripts/`, the config files), the night 
 
 - **`public/models/f2004.glb`** is a 3D model of the 2004 Ferrari F2004 taken from Assetto Corsa.
   It belongs to its owners and is not licensed by this repository.
+- **`public/audio/`** (except the synthesized burst): Sound clips of the 2004 Ferrari F2004
+  rendered from Assetto Corsa's sound banks by rustyAC. They belong to their owners and are not
+  licensed by this repository. The same goes for their lossless sources in
+  `assets-src/media/audio/`. The tyre-burst sound is not one of these clips: it is made in code
+  (`src/scene/audio/`) and is covered by the GPL like the rest of the source.
 - **The screenshots** in `src/assets/screenshots/` and `public/og/` are pictures of rustyAC
   running, and they show cars and tracks from Assetto Corsa. Those cars and tracks belong
   to their owners.
