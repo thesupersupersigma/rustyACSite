@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "astro dev",
+    "prebuild": "node scripts/fetch-web-preview.mjs",
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",
@@ -17,9 +18,13 @@
     "bench": "node scripts/bench.mjs",
     "shots": "node scripts/shots.mjs",
     "audio": "node scripts/encode-audio.mjs",
-    "audio:check": "node scripts/check-audio.mjs"
+    "audio:check": "node scripts/check-audio.mjs",
+    "play:fetch": "node scripts/fetch-web-preview.mjs",
+    "links": "node scripts/check-links.mjs",
+    "shots:pages": "node scripts/shots-pages.mjs"
   },
   "dependencies": {
+    "@astrojs/rss": "4.0.19",
     "@astrojs/sitemap": "3.7.4",
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource/jetbrains-mono": "5.3.0",

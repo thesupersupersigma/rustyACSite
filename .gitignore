@@ -34,3 +34,11 @@ Thumbs.db
 # Raw media from rustyAC: the PNGs are copied into src/assets/, the WAVs are kept as FLAC
 assets-src/media/screenshots/
 assets-src/media/audio/*.wav
+
+# Added in task 04
+# The browser preview, unpacked from the latest rustyAC release before every build
+# (scripts/fetch-web-preview.mjs)
+public/play/app/
+public/play/app.new/
+# The listening file is remade by `node scripts/render-sound.mjs` and differs on every render
+docs/task03/*.wav
