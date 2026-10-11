@@ -10,6 +10,12 @@
   (exposure, env intensity, lights), `src/scene/track.ts` (wetness), `src/scene/streaks.ts` and
   `src/scene/rig.ts` (camera), and check with `?debug=1`.
 
+## Git
+
+Three commits on `master`, nothing pushed: the site (`dbfa055`), a `.gitattributes` follow-up that
+keeps `public/models/`, `public/textures/` and `assets-src/` byte for byte, and this note. `brainstorm.md`,
+`prompts/`, `scratch/`, `assets/`, `node_modules/` and `dist/` are ignored.
+
 ## Summary
 
 The site now exists. It is an Astro + TypeScript project with the design system (charcoal, rust
