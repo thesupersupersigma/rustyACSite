@@ -116,10 +116,15 @@ npm run dev      # http://localhost:4321, scroll down to the car
 - Hold about 6.5 s for the pop, then click **Pit stop**.
 - Drag the camera around: the engine moves between the speakers, and gets a little quieter from
   further away.
-- Scroll away and back. Reload: the speaker shows "Sound on", and the first rev starts it.
+- Scroll away and back. Reload: the speaker looks off with a small "tap to resume" hint, and the
+  first rev (or a press of the speaker) starts the sound. (Changed in task 04: it used to show
+  "Sound on" before any sound played.)
 - `?debug=1` shows what the sound is doing.
-- The listening file: `docs/task03/site_burnout.wav`. To make it again:
-  `npm run build && node scripts/render-sound.mjs`.
+- The listening file: `docs/task03/site_burnout.wav`. **It is not in git any more** (task 04: it is
+  2.9 MB and differs on every render; `docs/task03/*.wav` is gitignored). To make it:
+  `npm run build && node scripts/render-sound.mjs`. That writes the WAV and
+  `site_burnout_levels.txt` (which stays in git) into `docs/task03/`. It needs the headless
+  Chromium from `npx playwright install chromium`.
 - In the console: `__f2004.sound.state()`, `.toggle()`, `.level()`.
 
 ## Encoding results
@@ -271,7 +276,8 @@ as loud.
 
 ## The listening file
 
-`docs/task03/site_burnout.wav`: 15.65 s, 48 kHz, 16-bit stereo, 2.87 MB. Rendered in headless
+`docs/task03/site_burnout.wav` (not in git since task 04; remake it with
+`npm run build && node scripts/render-sound.mjs`): 15.65 s, 48 kHz, 16-bit stereo, 2.87 MB. Rendered in headless
 Chromium by `window.__f2004.sound.renderRun()`. It steps the burnout through `__f2004.sim` in
 1/60 s steps, records what the engine did, and plays that through the same graph and the same
 `public/audio/` files as the live sound, into an offline audio context. The camera is pinned at the
@@ -407,6 +413,7 @@ Choices I made without asking, for you to confirm or change.
     build first, like `shots.mjs`. `check-audio.mjs` is `npm run audio:check`.
 17. **`docs/task03/site_burnout.wav` is 2.9 MB in git**, and each new render adds another. Say so if
     you would rather keep it out of the repo.
+    - Done in task 04: the file is untracked and `docs/task03/*.wav` is gitignored.
 18. **The listening file is not byte-identical from run to run** (the numbers in the level table
     are). I did not find out why.
 19. **`__f2004.sound.level()`** exists for every visitor, like `__f2004.sim`. It is what the check
