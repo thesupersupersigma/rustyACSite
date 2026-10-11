@@ -55,6 +55,9 @@ export class CameraRig {
   private lastX = 0;
   private lastY = 0;
   private reducedMotion: boolean;
+  private pinned = false;
+  private shake = 0;
+  private shakeClock = 0;
 
   private readonly target = new Vector3();
   private readonly element: HTMLElement;
@@ -75,6 +78,19 @@ export class CameraRig {
     this.reducedMotion = on;
   }
 
+  /** Metres of camera shake (the burnout sets it from the revs). Ignored with reduced motion. */
+  setShake(amount: number): void {
+    this.shake = amount;
+  }
+
+  /** Puts the camera at a fixed angle and keeps it there (test hook); `null` or a drag releases it. */
+  setView(view: { azimuth: number; height: number } | null): void {
+    this.pinned = view !== null;
+    if (!view) return;
+    this.azimuth = this.goalAzimuth = view.azimuth;
+    this.height = this.goalHeight = MathUtils.clamp(view.height, MIN_HEIGHT, MAX_HEIGHT);
+  }
+
   setAspect(aspect: number): void {
     // keep the horizontal field of view on narrow windows so the car still fits
     const camera = this.camera;
@@ -91,6 +107,7 @@ export class CameraRig {
   private readonly onDown = (e: PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     this.dragging = true;
+    this.pinned = false;
     this.pointerId = e.pointerId;
     this.lastX = e.clientX;
     this.lastY = e.clientY;
@@ -128,7 +145,7 @@ export class CameraRig {
     if (!this.dragging) this.idle += dt;
 
     // with reduced motion the camera only moves when the visitor drags it: no drift back, no sway
-    if (this.idle >= IDLE_AFTER && !this.reducedMotion) {
+    if (this.idle >= IDLE_AFTER && !this.reducedMotion && !this.pinned) {
       // ease the goals back toward the hero angle and its slow sway
       this.swayClock += dt;
       const hero = HERO_AZIMUTH + Math.sin(this.swayClock * SWAY_RATE) * SWAY;
@@ -165,6 +182,12 @@ export class CameraRig {
     const radius = Math.sqrt(Math.max(distance * distance - rise * rise, 2.25));
     this.target.set(0, TARGET_Y + lift, TARGET_Z);
     this.camera.position.set(Math.sin(azimuth) * radius, height, TARGET_Z + Math.cos(azimuth) * radius);
+    if (this.shake > 0 && !this.reducedMotion) {
+      this.shakeClock += dt;
+      const c = this.shakeClock;
+      this.camera.position.x += this.shake * (Math.sin(c * 97) * 0.6 + Math.sin(c * 151 + 1.1) * 0.4);
+      this.camera.position.y += this.shake * (Math.sin(c * 113 + 2.3) * 0.6 + Math.sin(c * 181) * 0.4);
+    }
     this.camera.lookAt(this.target);
     this.camera.updateMatrixWorld();
   }

@@ -1,9 +1,10 @@
 // The F2004 night scene. Loaded only through `import()` from F2004Scene.astro, so three.js never
 // reaches visitors who don't get the scene.
 //
-// Tasks 02/03 hook in through the object `createF2004Scene` resolves to (see F2004Scene in
-// types.ts): `getCar()`, `getStartLights()`, `onFrame(cb)` and `p`. Nothing here revs, smokes or
-// makes a sound.
+// The burnout (hold to rev, smoke, pop, pit stop) lives in burnout.ts and is driven from the frame
+// loop here. Task 03 hooks in through the object `createF2004Scene` resolves to (see F2004Scene in
+// types.ts): `engine`, `events`, `getCar()`, `getStartLights()`, `onFrame(cb)` and `p`. Nothing
+// here makes a sound.
 import {
   ACESFilmicToneMapping,
   BackSide,
@@ -36,6 +37,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { loadAssets, type FloodlightInfo } from './assets';
+import { Burnout } from './burnout';
 import { DebugOverlay } from './debug';
 import { QualityGovernor, TIERS } from './quality';
 import { PlanarReflection } from './reflection';
@@ -405,11 +407,25 @@ async function buildScene(
   const debug = options.debug ? new DebugOverlay(container) : undefined;
   teardown.push(() => debug?.dispose());
 
+  // ---- the burnout -------------------------------------------------------------------------------
+  let reducedMotion = options.reducedMotion;
+  const burnout = new Burnout({
+    scene,
+    car: carNodes,
+    carMaterials,
+    startLights: track.startLights,
+    rig,
+    container,
+    groundLayer: mirrorHidden,
+    getTier: () => quality.tier,
+    getReducedMotion: () => reducedMotion,
+  });
+  teardown.push(() => burnout.dispose());
+
   // ---- frame loop --------------------------------------------------------------------------------
   const callbacks: FrameCallback[] = [];
   const frame: FrameInfo = { dt: 0, time: 0, p: 0 };
   let p = 0;
-  let reducedMotion = options.reducedMotion;
   let raf = 0;
   let last = 0;
   let running = false;
@@ -452,10 +468,11 @@ async function buildScene(
     frame.time += frame.dt;
     frame.p = p;
     quality.sample(dtMs);
+    burnout.update(frame.dt, p);
     for (let i = 0; i < callbacks.length; i++) callbacks[i]?.(frame);
     rig.update(frame.dt, p);
     draw();
-    debug?.frame(dtMs, renderer, quality.tier, dpr, p);
+    debug?.frame(dtMs, renderer, quality.tier, dpr, p, burnout);
   };
 
   const start = () => {
@@ -512,8 +529,12 @@ async function buildScene(
   // Warm the shaders up, then draw one real frame while the loading bar still covers the canvas:
   // that frame compiles whatever the render targets of this tier need, so "ready" means "on screen".
   rig.update(0, p);
+  // the blur discs and the smoke are hidden at rest; shown for this one frame so their shaders compile now
+  burnout.setWarm(true);
   await renderer.compileAsync(scene, camera);
   if (disposed) throw new Error('the scene was torn down while loading');
+  draw();
+  burnout.setWarm(false);
   draw();
   options.onProgress?.(1);
 
@@ -524,6 +545,9 @@ async function buildScene(
     get tier() {
       return quality.tier;
     },
+    engine: burnout.engine,
+    events: burnout.events,
+    sim: burnout.hooks,
     getCar: () => carNodes,
     getStartLights: () => track.startLights,
     onFrame(cb) {

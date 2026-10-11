@@ -1,4 +1,5 @@
-// The `?debug=1` overlay: FPS, frame time, tier, pixel ratio, draw calls and triangles.
+// The `?debug=1` overlay: FPS, frame time, tier, pixel ratio, draw calls and triangles, plus the
+// burnout's state (revs, throttle, heat, smoke).
 import type { WebGLRenderer } from 'three';
 import type { Tier } from './types';
 
@@ -31,7 +32,7 @@ export class DebugOverlay {
   }
 
   /** Call once per rendered frame; the text refreshes about four times a second. */
-  frame(dtMs: number, renderer: WebGLRenderer, tier: Tier, dpr: number, p: number): void {
+  frame(dtMs: number, renderer: WebGLRenderer, tier: Tier, dpr: number, p: number, extra?: { debugText(): string }): void {
     this.frames++;
     this.elapsed += dtMs;
     if (dtMs > this.worst) this.worst = dtMs;
@@ -46,7 +47,9 @@ export class DebugOverlay {
       `dpr    ${dpr.toFixed(2)}\n` +
       `calls  ${calls}\n` +
       `tris   ${triangles.toLocaleString('en-US')}\n` +
-      `p      ${p.toFixed(3)}`;
+      `p      ${p.toFixed(3)}` +
+      (extra ? `
+${extra.debugText()}` : '');
     this.frames = 0;
     this.elapsed = 0;
     this.worst = 0;

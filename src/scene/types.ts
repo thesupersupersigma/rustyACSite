@@ -1,4 +1,6 @@
 import type { Mesh, Object3D } from 'three';
+import type { BurnoutEvents } from './events';
+import type { SimSnapshot, SimState } from './sim';
 
 export type WheelId = 'FL' | 'FR' | 'RL' | 'RR';
 export const WHEEL_IDS: readonly WheelId[] = ['FL', 'FR', 'RL', 'RR'];
@@ -42,6 +44,49 @@ export interface SceneOptions {
   onProgress?: (fraction: number) => void;
 }
 
+/** The engine as task 03 (sound) reads it. Live values: read them whenever you need them. */
+export interface EngineReadout {
+  /** Revs per minute: about 4,000 at idle, 18,500 at the limiter. */
+  readonly rpm: number;
+  /** 0 at idle, 1 at the limiter. */
+  readonly rpmNorm: number;
+  /** 1 while the throttle is held and the engine is driven, otherwise 0. */
+  readonly throttle: number;
+  readonly state: SimState;
+  /** Rear tyre heat, 0 cold to 1 popping. */
+  readonly heat: number;
+  /** Rear wheel speed in rad/s. */
+  readonly wheelSpeed: number;
+  /** True while the revs bounce off the limiter. */
+  readonly limiter: boolean;
+}
+
+/**
+ * Test hooks (`window.__f2004.sim`). Using any of them switches the burnout to a manual clock: it
+ * then only moves in fixed 1/60 s steps when told to, which makes screenshots repeatable.
+ * `resume()` hands it back to real time and to the visitor.
+ */
+export interface SimHooks {
+  /** Holds the throttle and runs `seconds` of it. The throttle stays held afterwards. */
+  hold(seconds: number): void;
+  release(): void;
+  /** Runs `seconds` with the throttle as it is. */
+  advance(seconds: number): void;
+  /** Pops the rear tyres now, whatever the heat. */
+  pop(): void;
+  /** Starts the pit stop (only does something while popped). */
+  pitStop(): void;
+  /** Hands the clock back to real time and the camera back to the visitor. */
+  resume(): void;
+  /**
+   * Pins the camera: degrees around the car (0 = straight ahead of the nose, positive toward its left,
+   * 180 = behind) and metres above the ground. It stays there until the visitor drags or `resume()`.
+   */
+  view(azimuthDeg: number, height: number): void;
+  /** The simulation's current state (the same object every time). */
+  snapshot(): SimSnapshot;
+}
+
 /** What the homepage and tasks 02/03 get back from `createF2004Scene`. */
 export interface F2004Scene {
   /** Current scroll progress through the section, 0 to 1. */
@@ -52,6 +97,12 @@ export interface F2004Scene {
   getStartLights(): Mesh[];
   /** Runs every rendered frame, before the camera and the draw. Returns a function that removes it. */
   onFrame(cb: FrameCallback): () => void;
+  /** The engine read-out for the sound (task 03). */
+  readonly engine: EngineReadout;
+  /** `throttle:on`, `pop`, `nut:off` and the rest: see SimEventType in sim.ts. */
+  readonly events: BurnoutEvents;
+  /** Deterministic test hooks. */
+  readonly sim: SimHooks;
   setProgress(p: number): void;
   setReducedMotion(on: boolean): void;
   dispose(): void;
