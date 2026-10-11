@@ -1,0 +1,247 @@
+/* Long-form pages: Page.astro's text column and the devlog's Markdown. */
+
+.prose {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+/* a grid item is as wide as its widest content by default; this lets tables and code scroll instead */
+.prose > * {
+  min-width: 0;
+}
+
+/* text keeps a readable line; pictures, tables and cards may use the whole column */
+.prose > :where(p, ul, ol, dl, h3, h4, details, blockquote) {
+  max-width: 44rem;
+}
+
+.prose :where(h2) {
+  margin-top: clamp(28px, 4vw, 48px);
+  padding-top: clamp(24px, 3vw, 36px);
+  border-top: 1px solid var(--line);
+}
+
+.prose > :where(h2:first-child) {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.prose :where(h3) {
+  margin-top: 14px;
+  font-size: 1.25rem;
+}
+
+.prose :where(h4) {
+  margin: 8px 0 0;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.prose :where(ul, ol) {
+  margin: 0;
+  padding-left: 1.3em;
+  display: grid;
+  gap: 8px;
+}
+
+.prose :where(li) {
+  padding-left: 0.2em;
+}
+
+.prose :where(li)::marker {
+  color: var(--muted);
+}
+
+.prose :where(a) {
+  text-decoration-color: var(--accent);
+}
+
+.prose :where(strong) {
+  font-weight: 650;
+}
+
+.prose :where(code, kbd) {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  padding: 0.12em 0.4em;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  overflow-wrap: anywhere;
+}
+
+.prose :where(pre) {
+  margin: 0;
+  padding: 16px 18px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+
+.prose :where(pre code) {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: inherit;
+  overflow-wrap: normal;
+}
+
+.prose :where(blockquote) {
+  margin: 0;
+  padding-left: 18px;
+  border-left: 2px solid var(--accent);
+  color: var(--muted);
+}
+
+/* a table scrolls sideways inside its own box on a narrow screen, never the page */
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.prose :where(table) {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.prose :where(th, td) {
+  padding: 10px 14px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+
+.prose :where(tr:last-child > td) {
+  border-bottom: 0;
+}
+
+.prose :where(th) {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+  background: var(--surface);
+}
+
+/* <details> as a row that opens: the changelog, the FAQ */
+.fold {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.fold > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  padding: 14px 44px 14px 18px;
+  position: relative;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+}
+
+.fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fold > summary::after {
+  content: '';
+  position: absolute;
+  right: 20px;
+  top: 22px;
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  transform: rotate(45deg);
+  transition: transform 0.15s var(--ease);
+}
+
+.fold[open] > summary::after {
+  transform: translateY(4px) rotate(-135deg);
+}
+
+.fold > summary:focus-visible {
+  outline-offset: -2px;
+  border-radius: var(--radius-sm);
+}
+
+.fold__meta {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.fold__body {
+  display: grid;
+  gap: 12px;
+  padding: 0 18px 16px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.fold__body :where(a) {
+  color: var(--text);
+}
+
+.fold__body :where(ul) {
+  margin: 0;
+  padding-left: 1.3em;
+}
+
+.fold-list {
+  display: grid;
+  gap: 8px;
+  max-width: 44rem;
+}
+
+/* status with a dot: the roadmap */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.pill::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  flex: none;
+}
+
+.pill--done::before {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.pill--progress::before {
+  border-color: var(--accent);
+}
+
+.pill--parked::before {
+  background: var(--muted);
+  border-color: var(--muted);
+}
+
+.pill--planned::before {
+  background: var(--line);
+}

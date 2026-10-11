@@ -1,0 +1,56 @@
+---
+// A picture with a caption. The build makes AVIF and WebP copies at several widths (up to 2560, never
+// wider than the source) and the browser picks one from `sizes`. Loaded lazily unless told otherwise.
+import { Picture } from 'astro:assets';
+
+interface Props {
+  src: ImageMetadata;
+  alt: string;
+  caption?: string;
+  /** The picture's width on the page, as an <img sizes> value. Default: the full page width. */
+  sizes?: string;
+  loading?: 'lazy' | 'eager';
+  class?: string;
+}
+
+// the page is at most 1120 CSS px wide; below that it is the window minus the gutters
+const PAGE_WIDTH =
+  '(min-width: 1184px) 1120px, (min-width: 1024px) calc(100vw - 64px), (min-width: 640px) calc(100vw - 48px), calc(100vw - 32px)';
+const WIDTHS = [640, 960, 1280, 1920, 2560];
+
+const { src, alt, caption, sizes = PAGE_WIDTH, loading = 'lazy', class: className } = Astro.props;
+const widths = [...WIDTHS.filter((w) => w < src.width), src.width];
+---
+
+<figure class:list={['fig', className]}>
+  <Picture
+    src={src}
+    formats={['avif']}
+    fallbackFormat="webp"
+    widths={widths}
+    sizes={sizes}
+    alt={alt}
+    loading={loading}
+    decoding="async"
+    class="fig__img card"
+  />
+  {caption && <figcaption class="fig__cap muted">{caption}</figcaption>}
+</figure>
+
+<style>
+  .fig {
+    margin: 0;
+    display: grid;
+    gap: 10px;
+  }
+
+  .fig :global(.fig__img) {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .fig__cap {
+    font-size: 0.9375rem;
+    max-width: 44rem;
+  }
+</style>

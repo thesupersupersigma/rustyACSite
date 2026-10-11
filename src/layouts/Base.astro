@@ -15,15 +15,21 @@ interface Props {
   title?: string;
   description: string;
   noindex?: boolean;
-  /** Extra JSON-LD for this page. */
-  jsonLd?: Record<string, unknown>;
+  /** Extra JSON-LD for this page: one object or several. */
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  /** The share image, when the page has its own (a WebP, 1200x630). The default is the site's. */
+  ogImage?: { src: string; alt: string } | undefined;
+  /** No top bar and no footer: the page is one bare screen. */
+  bare?: boolean;
 }
 
-const { title, description, noindex = false, jsonLd } = Astro.props;
+const { title, description, noindex = false, jsonLd, ogImage: ownOg, bare = false } = Astro.props;
+const jsonLdList = jsonLd ? [jsonLd].flat() : [];
 
 const fullTitle = title ? `${title} · ${SITE_NAME}` : `${SITE_NAME}: Assetto Corsa, rebuilt from scratch in Rust`;
 const canonical = new URL(Astro.url.pathname, Astro.site ?? SITE_URL).href;
-const ogImage = new URL('/og/rustyac-og.webp', Astro.site ?? SITE_URL).href;
+const ogImage = new URL(ownOg?.src ?? '/og/rustyac-og.webp', Astro.site ?? SITE_URL).href;
+const ogAlt = ownOg?.alt ?? 'rustyAC: Assetto Corsa, rebuilt from scratch in Rust.';
 
 // Latin subsets only. Declared here (not through the packages' CSS) so the files can be preloaded
 // and no unused subset ends up in the build.
@@ -65,7 +71,7 @@ const fontCss = [
     <meta property="og:image:type" content="image/webp" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="rustyAC: Assetto Corsa, rebuilt from scratch in Rust." />
+    <meta property="og:image:alt" content={ogAlt} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={fullTitle} />
     <meta name="twitter:description" content={description} />
@@ -75,20 +81,21 @@ const fontCss = [
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="sitemap" href="/sitemap-index.xml" />
+    <link rel="alternate" type="application/rss+xml" title="rustyAC devlog" href="/devlog/rss.xml" />
 
     <link rel="preload" as="font" type="font/woff2" href={syne700} crossorigin />
     <link rel="preload" as="font" type="font/woff2" href={inter} crossorigin />
     <style is:inline set:html={fontCss}></style>
 
-    {jsonLd && <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+    {jsonLdList.map((item) => <script is:inline type="application/ld+json" set:html={JSON.stringify(item)} />)}
     <meta name="generator" content={Astro.generator} />
   </head>
   <body>
     <a class="skip" href="#main">Skip to content</a>
-    <TopBar />
+    {!bare && <TopBar />}
     <main id="main">
       <slot />
     </main>
-    <Footer />
+    {!bare && <Footer />}
   </body>
 </html>

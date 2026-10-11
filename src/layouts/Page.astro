@@ -1,0 +1,188 @@
+---
+// Every page except the homepage: Base plus a page header (title, one-line intro), a text column of
+// readable width and, for long pages, a table of contents.
+import '../styles/prose.css';
+import Base from './Base.astro';
+import { SITE_NAME, SITE_URL } from '../lib/site';
+
+interface Crumb {
+  name: string;
+  href: string;
+}
+
+interface Props {
+  title: string;
+  /** One line under the title. */
+  intro: string;
+  /** The meta description. */
+  description: string;
+  /** Sections for the table of contents: the `id` of a heading on the page and its text. */
+  toc?: { id: string; label: string }[];
+  /** Pages between the homepage and this one (the devlog for a post). */
+  parents?: Crumb[];
+  ogImage?: { src: string; alt: string } | undefined;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  noindex?: boolean;
+}
+
+const { title, intro, description, toc = [], parents = [], ogImage, jsonLd, noindex = false } = Astro.props;
+
+const site = Astro.site ?? new URL(SITE_URL);
+const crumbs: Crumb[] = [{ name: SITE_NAME, href: '/' }, ...parents];
+const trail = [...crumbs, { name: title, href: Astro.url.pathname }];
+const breadcrumbs = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: trail.map((c, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    name: c.name,
+    item: new URL(c.href, site).href,
+  })),
+};
+const allJsonLd = [breadcrumbs, ...(jsonLd ? [jsonLd].flat() : [])];
+---
+
+<Base title={title} description={description} jsonLd={allJsonLd} ogImage={ogImage} noindex={noindex}>
+  <article class="page wrap">
+    <header class="page__head">
+      <nav class="crumbs mono" aria-label="Breadcrumb">
+        <ol>
+          {
+            crumbs.map((c) => (
+              <li>
+                <a href={c.href}>{c.name}</a>
+              </li>
+            ))
+          }
+          <li aria-current="page">{title}</li>
+        </ol>
+      </nav>
+      <h1>{title}</h1>
+      <p class="lede">{intro}</p>
+      <slot name="head" />
+    </header>
+
+    <div class:list={['page__body', { 'page__body--toc': toc.length > 0 }]}>
+      {
+        toc.length > 0 && (
+          <nav class="toc" aria-label="On this page">
+            <p class="toc__title mono">On this page</p>
+            <ol>
+              {toc.map((item) => (
+                <li>
+                  <a href={`#${item.id}`}>{item.label}</a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )
+      }
+      <div class="prose">
+        <slot />
+      </div>
+    </div>
+  </article>
+</Base>
+
+<style>
+  .page {
+    padding-block: clamp(40px, 7vw, 88px) var(--section);
+  }
+
+  .page__head {
+    display: grid;
+    justify-items: start;
+    gap: 18px;
+    margin-bottom: clamp(32px, 5vw, 56px);
+  }
+
+  .page__head h1 {
+    font-size: clamp(2rem, 1.4rem + 3vw, 3.25rem);
+    max-width: 24ch;
+  }
+
+  .page__head .lede {
+    max-width: 42rem;
+  }
+
+  .crumbs ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--step--1);
+    color: var(--muted);
+  }
+
+  .crumbs li + li::before {
+    content: '/';
+    margin-right: 8px;
+    color: var(--line);
+  }
+
+  .crumbs a {
+    text-decoration: none;
+  }
+
+  .crumbs a:hover {
+    color: var(--text);
+  }
+
+  .page__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+
+  .toc {
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    font-size: 0.9375rem;
+    max-width: 44rem;
+  }
+
+  .toc__title {
+    font-size: var(--step--1);
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .toc ol {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .toc a {
+    color: var(--muted);
+    text-decoration: none;
+  }
+
+  .toc a:hover {
+    color: var(--text);
+  }
+
+  @media (min-width: 1024px) {
+    .page__body--toc {
+      grid-template-columns: minmax(0, 1fr) 208px;
+      gap: 56px;
+      align-items: start;
+    }
+
+    .page__body--toc .toc {
+      order: 2;
+      position: sticky;
+      top: calc(var(--bar-h) + 24px);
+      padding: 0 0 0 18px;
+      border: 0;
+      border-left: 1px solid var(--line);
+      border-radius: 0;
+    }
+  }
+</style>
