@@ -28,15 +28,15 @@ Then the copy was proven. For each of the seven functions with one argument, eve
 
 ## 160 drives
 
-With the maths settled, the physics crates were built for WebAssembly as they were. The Windows-only parts (the window, Direct3D, the input devices, the sound library) were already separate.
+With the maths settled, the physics crates were built for WebAssembly as they were. The game around them needed sorting first: the window, Direct3D, the input devices and the sound library were put behind a "Windows only" switch.
 
-The proof is a replay. Every recorded drive from the earlier tasks was run twice: through the desktop build with the real DLL, and through the WebAssembly build with the Rust maths. After every single step, a hash of the car's whole state was compared.
+The proof is a replay. The recorded drives from the earlier tasks, and nine recorded for this one, were each run twice: through the desktop build with the real DLL, and through the WebAssembly build with the Rust maths. After every single step, a hash of the car's whole state was compared.
 
 **160 drives, 1,787,777 steps: every step's hash is equal in all 160.** The drives cover every suspension type, four-wheel drive, hybrids, crashes, loose cones and whole laps.
 
 <!-- docs/port/web.md lines 217-229 and section 3.2 (lines 234-281) -->
 
-It did not pass the first time. Seven drives differed, and all seven had something in common: a moment with eight or more contact points at once. That path of the physics library uses a processor instruction for an approximate reciprocal, and its last bits are not defined by any standard. WebAssembly has no such instruction. The fix was to measure what the instruction answers on the test PC's Intel processor, for all 4,294,967,296 operands, and put that into a table.
+It did not pass the first time. Seven drives differed, and all seven had something in common: a moment where the solver had eight or more contact rows at once. That path of the physics library uses a processor instruction for an approximate reciprocal, and its last bits are not defined by any standard. WebAssembly has no such instruction. The fix was to measure what the instruction answers on the test PC's Intel processor, for all 4,294,967,296 operands, and put that into a table.
 
 <!-- docs/port/web.md lines 283-286 and 294-308 -->
 
@@ -64,7 +64,7 @@ The picture is not Assetto Corsa's. The game's shaders are compiled for Direct3D
 
 <!-- docs/port/web.md section 4.2 (lines 354-372) and section 7 -->
 
-It is fast enough. On the test PC, Chrome holds 60 frames a second with the physics at its fixed 333 steps a second. Run flat out, the WebAssembly physics reaches 60 to 75 % of the desktop's speed, which is still 13 to 31 times faster than real time.
+It is fast enough. On the test PC, headless Chrome holds 60 frames a second with the physics at its fixed 333 steps a second. Run flat out, the WebAssembly physics reaches 60 to 75 % of the desktop's speed, which is still 13 to 31 times faster than real time.
 
 <!-- docs/port/web.md lines 472-497 -->
 

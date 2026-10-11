@@ -42,7 +42,7 @@ The first result was the tyre formula: 329,734 questions, seven numbers each, ze
 
 ## Why the decompiler is not enough
 
-The first surprise was how little the decompiler's output can be trusted for this. Its pseudo-C is right about what is computed, but it regroups arithmetic. In the tyre formula it shows
+The first surprise was that the decompiler's output is not enough for this. Its pseudo-C is right about what is computed, but it regroups arithmetic. In the tyre formula it shows
 
 ```
 (cos · speed) · slipRatio
@@ -58,7 +58,7 @@ In ordinary maths those are the same. In floating point they can differ in the l
 
 <!-- docs/port/sctm.md section 4, lines 136-144; docs/port/awd_ers.md lines 77-79 -->
 
-The same thing happened with source code. The game's rigid-body physics is ODE 0.13.1, an open-source library, so its source is public. A literal port of that source matched the game on only 54 % of the steps of a car. The compiler had turned some sums into packed four-lane additions, which add up in a different order. The machine code was followed instead, and all 1,996,043 test steps came out identical.
+The same thing happened with source code. The game's rigid-body physics is ODE 0.13.1, an open-source library, so its source is public. A literal port of that source matched the game on only 54 % of the steps of a car. The game's machine code adds some sums in packed four-lane blocks, which add up in a different order. The machine code was followed instead, and all 1,996,043 test steps came out identical.
 
 <!-- docs/map/physics_engine.md lines 43-48 (ODE 0.13.1); docs/port/ode_stage1.md, the table of differences row 1 (54 %) and section 1 (1,996,043 steps) -->
 
@@ -76,7 +76,7 @@ The Rust car is then told only what the driver did, and has to arrive at the sam
 
 Later tasks reused the idea for everything else:
 
-- **Tracks:** 8,800,000 ray casts against the track models, every answer identical, and 2,752,168 steps in 89 drives with zero differences.
+- **Tracks:** 8,800,000 ray casts against the track models, every answer identical, and 2,752,168 steps in 89 drives with zero differences (one value is left out on the drag strips, where the game itself reads memory that is not its own).
 - **Sound:** a log of every call into the game's sound library. On 18 recorded drives the port makes exactly the calls the game makes: 16,704,338 of them, every argument bit-equal.
 - **The renderer:** the list of Direct3D 11 commands and the finished pixels, compared on a software graphics card so that two runs give the same picture. On the first 21 frames both were identical, line for line and byte for byte.
 
@@ -84,9 +84,9 @@ Later tasks reused the idea for everything else:
 
 ## Can the test fail?
 
-A comparison that always says "identical" proves nothing. So deliberate small faults were put into the Rust car, one at a time, to see whether the comparison notices: 18 in the rolling chassis, 12 in the drivetrain, 24 in the whole car. Every one was caught.
+A comparison that always says "identical" proves nothing. So deliberate small faults were put into the Rust car, one at a time, to see whether the comparison notices: 18 in the rolling chassis, and 24 in the whole car (12 of them in the drivetrain). All 24 were caught. Of the 18, five only showed on a car altered to reach the code they were in, which is itself worth knowing: a drive only tests what it touches.
 
-<!-- docs/port/rolling_chassis.md, docs/port/drivetrain.md, docs/port/whole_car.md line 66 -->
+<!-- docs/port/rolling_chassis.md lines 336-339; docs/port/whole_car.md lines 66 and 455 -->
 
 ## What it does not prove
 
@@ -99,4 +99,4 @@ A comparison that always says "identical" proves nothing. So deliberate small fa
 
 <!-- docs/port/drivetrain.md section 6.3 and docs/port/whole_car.md sections 3.4 and 6.3 (untested branches); docs/port/web.md lines 174-176; docs/port/audio.md section 5.2 -->
 
-Every report ends with what was not done. That list is as much a part of the proof as the numbers are.
+The reports say what was not done. That list is as much a part of the proof as the numbers are.

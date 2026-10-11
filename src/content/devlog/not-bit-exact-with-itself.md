@@ -8,7 +8,7 @@ cover: gallery_night_lights
 coverAlt: A BMW 1M with its headlights on at Spa after sunset, drawn by rustyAC
 ---
 
-rustyAC is built on one stubborn idea: for the same inputs, give the same bits as the original game. It turns out the original game does not manage that itself. Run it on two processors, ten years apart, and the same drive can come out differently.
+rustyAC is built on one stubborn idea: for the same inputs, give the same bits as the original game. It turns out the original game does not manage that itself. Run it on a 2012 processor and on a 2014 one, and the same drive can come out differently.
 
 Here is how that was found, and what it does and does not change.
 
@@ -32,7 +32,7 @@ The flag is set when the DLL is loaded, if the processor has FMA3 and the operat
 
 <!-- docs/port/web.md lines 68-72 and 98-101 -->
 
-A fused multiply-add computes `a × b + c` with one rounding instead of two. It is more accurate. It is also, for that reason, a different answer.
+A fused multiply-add computes `a × b + c` as one correctly rounded operation instead of two rounded ones. That is a different last bit now and then.
 
 ## Measuring it
 
@@ -45,11 +45,11 @@ Nobody had to guess how different. The DLL has a switch to turn the FMA3 path of
 | `expf` | 1 |
 | `tanf` | none |
 
-For `powf`, 7,020 of 400 million sampled pairs differ. The other functions have only one body.
+For `powf`, 7,020 of 400 million sampled pairs differ, and for the double-precision `sin`, 954,879 of 100 million sampled inputs. `tanf` has two bodies too, but they agree. The remaining four functions have only one.
 
 <!-- docs/port/web.md, the fma3-off table, lines 162-172 -->
 
-44,232 out of 4.29 billion is about one input in a hundred thousand. That sounds like nothing. But a car's physics runs 333 steps a second, each step calls these functions many times, and every step starts from the result of the one before. One different last bit does not stay a last bit.
+44,232 out of 4.29 billion is about one input in a hundred thousand. That sounds like nothing. But a bit-for-bit replay needs every one of them.
 
 The report states the consequence plainly: Assetto Corsa's maths depends on whether the processor has FMA3. A drive recorded on a pre-2013 processor would not replay bit for bit on a modern one, in the real game either.
 
@@ -57,7 +57,7 @@ The report states the consequence plainly: Assetto Corsa's maths depends on whet
 
 ## A second one
 
-It is not the only place. The game's rigid-body physics library uses a processor instruction that gives an approximate reciprocal. Its last bits are not fixed by any standard, and they differ between Intel and AMD processors. It is only used on one rare path, when there are eight or more contact points at once.
+It is not the only place. The game's rigid-body physics library uses a processor instruction that gives an approximate reciprocal. Its last bits are not fixed by any standard, and they differ between Intel and AMD processors. It is only used on one rare path, when the solver has eight or more rows at once.
 
 So there, too, the game is not the same on every PC.
 
@@ -65,9 +65,9 @@ So there, too, the game is not the same on every PC.
 
 ## What rustyAC does about it
 
-On the desktop, nothing changes. rustyAC calls the real DLL, so it takes whichever path the game would take on that processor. On an old processor that is the old path, exactly as in the game.
+On the desktop, nothing changes as long as the DLL is installed. rustyAC calls the real DLL, so it takes whichever path the game would take on that processor. On an old processor that is the old path, exactly as in the game. Only an old processor without the DLL gets the modern results, from the Rust copy.
 
-<!-- docs/port/web.md lines 195-204 and 808-811 -->
+<!-- docs/port/web.md lines 195-204, 563-565 and 808-811 -->
 
 The Rust copy of the maths is the FMA3 path only. That is the one the game runs on any current processor. It was proven against the DLL on every possible input of the seven one-argument functions, and it is what the browser preview uses. For the reciprocal, the browser uses a table measured on an Intel processor. So the browser computes what a modern Intel desktop computes.
 

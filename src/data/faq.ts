@@ -43,8 +43,8 @@ export const FAQ: FaqGroup[] = [
         // docs/port/sctm.md, section 4 ("Rust never contracts or reorders float operations on its own"); docs/port/web.md (the same crates as WebAssembly)
         id: 'rust',
         question: 'Why Rust?',
-        html: `<p>rustyAC is a full rewrite of the game, not a patch on the original program, and Rust is the language it is written in. Two things about Rust help a port like this. It never reorders or merges floating-point operations by itself, so the code computes exactly what is written, which a bit-exact port depends on. And the same code compiles to WebAssembly, which is how the browser preview runs the same physics. ${a('/how-it-works', 'How it works')} has the whole method.</p>`,
-        text: 'rustyAC is a full rewrite of the game, not a patch on the original program, and Rust is the language it is written in. Two things about Rust help a port like this. It never reorders or merges floating-point operations by itself, so the code computes exactly what is written, which a bit-exact port depends on. And the same code compiles to WebAssembly, which is how the browser preview runs the same physics.',
+        html: `<p>rustyAC is a rewrite of the game (still in progress), not a patch on the original program, and Rust is the language it is written in. Two things about Rust help a port like this. Built the way rustyAC builds it, it never reorders or merges floating-point operations by itself, so the code computes exactly what is written, which a bit-exact port depends on. And the same code compiles to WebAssembly, which is how the browser preview runs the same physics. ${a('/how-it-works', 'How it works')} has the whole method.</p>`,
+        text: 'rustyAC is a rewrite of the game (still in progress), not a patch on the original program, and Rust is the language it is written in. Two things about Rust help a port like this. Built the way rustyAC builds it, it never reorders or merges floating-point operations by itself, so the code computes exactly what is written, which a bit-exact port depends on. And the same code compiles to WebAssembly, which is how the browser preview runs the same physics.',
       },
       {
         id: 'who',
@@ -82,8 +82,8 @@ export const FAQ: FaqGroup[] = [
         // HOW_TO_RUN.txt, section 2 (race.ini and assists.ini); docs/port/conditions.md
         id: 'content-manager',
         question: 'Does it work with Content Manager?',
-        html: '<p>rustyAC is started on its own, from the command line. It reads the session you last set up (temperatures, grip, wind and driving aids) from Assetto Corsa’s own settings files, and those are the files Content Manager writes too. So a session set up in Content Manager is the one rustyAC drives.</p>',
-        text: 'rustyAC is started on its own, from the command line. It reads the session you last set up (temperatures, grip, wind and driving aids) from Assetto Corsa’s own settings files, and those are the files Content Manager writes too. So a session set up in Content Manager is the one rustyAC drives.',
+        html: '<p>rustyAC is started on its own, from the command line. It reads the session you last set up (temperatures, grip, wind and driving aids) from Assetto Corsa’s own settings files, and those are the files Content Manager writes too. So the conditions and aids of a session set up in Content Manager are the ones rustyAC drives with; the car and track still come from the command line.</p>',
+        text: 'rustyAC is started on its own, from the command line. It reads the session you last set up (temperatures, grip, wind and driving aids) from Assetto Corsa’s own settings files, and those are the files Content Manager writes too. So the conditions and aids of a session set up in Content Manager are the ones rustyAC drives with; the car and track still come from the command line.',
       },
       {
         // HOW_TO_RUN.txt, section 1; docs/port/suspensions.md, section 5
@@ -96,8 +96,8 @@ export const FAQ: FaqGroup[] = [
         // HOW_TO_RUN.txt, section 1; docs/web.md
         id: 'mac-linux',
         question: 'Does it run on Mac or Linux?',
-        html: `<p>The desktop build is Windows only (Windows 10 or 11, 64-bit). The ${a('/play', 'browser preview')} runs in Chrome or Edge on a computer, and still needs your own Assetto Corsa folder.</p>`,
-        text: 'The desktop build is Windows only (Windows 10 or 11, 64-bit). The browser preview runs in Chrome or Edge on a computer, and still needs your own Assetto Corsa folder.',
+        html: `<p>The desktop build is Windows only (Windows 10 or 11, 64-bit). The ${a('/play', 'browser preview')} runs in Chrome or Edge on a computer (tested in Chrome only), and still needs your own Assetto Corsa folder.</p>`,
+        text: 'The desktop build is Windows only (Windows 10 or 11, 64-bit). The browser preview runs in Chrome or Edge on a computer (tested in Chrome only), and still needs your own Assetto Corsa folder.',
       },
     ],
   },

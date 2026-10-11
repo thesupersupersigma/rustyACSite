@@ -1,6 +1,6 @@
 # rustyAC
 
-> rustyAC is a from-scratch Rust rewrite of the racing simulator Assetto Corsa. Every system is checked against the original game's own code until the numbers match bit for bit. It is free software (GPL-3.0-or-later), very experimental, and Windows only. It ships no game files: you need your own copy of Assetto Corsa.
+> rustyAC is a from-scratch Rust rewrite of the racing simulator Assetto Corsa. Each ported system is checked against the original game's own code until the numbers match bit for bit. It is free software (GPL-3.0-or-later), very experimental, and Windows only. It ships no game files: you need your own copy of Assetto Corsa.
 
 Assetto Corsa is a trademark of its owners. rustyAC is not affiliated with them and is not endorsed by them.
 
@@ -19,5 +19,5 @@ Assetto Corsa is a trademark of its owners. rustyAC is not affiliated with them 
 
 - [Source code](https://github.com/thesupersupersigma/rustyAC)
 - [Releases](https://github.com/thesupersupersigma/rustyAC/releases)
-- [Port reports](https://github.com/thesupersupersigma/rustyAC/tree/master/docs/port): one technical report per ported system, each starting with a plain-English summary
+- [Port reports](https://github.com/thesupersupersigma/rustyAC/tree/master/docs/port): the technical reports, with a plain-English summary near the top of each
 - [Licences](https://github.com/thesupersupersigma/rustyAC/blob/master/LICENSING.md)

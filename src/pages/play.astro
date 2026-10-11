@@ -86,7 +86,7 @@ const CONTROLS: [string, string, string][] = [
   <ImageFigure
     src={webSpa}
     alt="The browser preview: a Ferrari F2004 seen from behind on the track at Spa, with the lap time, gear, speed and revs on the display"
-    caption="The preview in Chrome: the F2004 at Spa, 60 frames and 333 physics steps a second."
+    caption="The preview in Chrome: the F2004 at Spa, at about 60 frames and 333 physics steps a second."
     sizes="(min-width: 1184px) 856px, (min-width: 1024px) calc(100vw - 328px), (min-width: 640px) calc(100vw - 48px), calc(100vw - 32px)"
   />
 
@@ -113,7 +113,7 @@ const CONTROLS: [string, string, string][] = [
   <h2 id="need">What you need</h2>
   <!-- docs/web.md "Try it on this computer" and "How the page copes with a 441 MB file"; docs/port/web.md section 7 -->
   <ul>
-    <li><strong>Chrome or Edge on a computer.</strong> Other browsers were not tried.</li>
+    <li><strong>Chrome or Edge on a computer.</strong> It was tested in Chrome only; other browsers were not tried.</li>
     <li>
       <strong>Your own Assetto Corsa folder</strong>, the one with <code>content</code> and <code>system</code> in it
       (<code>...\steamapps\common\assettocorsa</code>). The site holds no Assetto Corsa file.
@@ -137,7 +137,8 @@ const CONTROLS: [string, string, string][] = [
       changed.
     </li>
     <li>
-      rustyac.com serves the preview's own files (a page, a script and the WebAssembly program) and nothing else. It
+      rustyac.com serves the preview's own files (the page, its script and style sheet, and the WebAssembly program)
+      and nothing else. It
       never receives your game's files.
     </li>
     <li>
@@ -169,7 +170,8 @@ const CONTROLS: [string, string, string][] = [
   </div>
   <p>
     Left Shift is also the clutch, so use Right Shift for Shift+T and Shift+Y while moving. <kbd>]</kbd> and
-    <kbd>[</kbd> are the two keys right of P. Keys pressed with Ctrl or Alt are left to the browser.
+    <kbd>[</kbd> are the two keys right of P. Keys pressed with Ctrl or Alt are left to the browser. The gamepad
+    bindings were only tested in code so far, not with a real pad.
   </p>
   <p>
     Something broke? Tell us in the <a href={LINKS.discord} rel="noopener">Discord</a>. The full build is the

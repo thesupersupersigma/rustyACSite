@@ -45,7 +45,7 @@ export const STATUS_TEXT: Record<TaskStatus, string> = {
 export const PROGRESS_NOTE = {
   text: 'About a third of the way.',
   detail:
-    'That is the roadmap’s own estimate, written when sound was finished (v0.19.0): the car physics and every track were done, with the renderer and the menus as the biggest pieces left. Most of the renderer has been ported since.',
+    'That is the roadmap’s own estimate, written when sound was finished (v0.19.0): the car physics and every track were done, with the renderer and the menus as the biggest pieces left.',
 };
 
 export const PHASES: Phase[] = [

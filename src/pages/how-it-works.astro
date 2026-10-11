@@ -33,13 +33,13 @@ const PROOFS: { what: string; count: string; result: string; report: string }[] 
   // docs/port/sctm.md, section 1
   { what: 'The tyre formula', count: '329,734 rows, seven numbers each', result: 'zero differences', report: 'sctm.md' },
   // docs/port/tyre_step.md, section 1
-  { what: 'A whole tyre', count: '97,800 steps', result: 'the same in every step', report: 'tyre_step.md' },
+  { what: 'A whole tyre', count: '97,800 steps', result: 'the same in every step (93,200 bit for bit; the rest are not-a-number inputs)', report: 'tyre_step.md' },
   // docs/port/ode_stage1.md, section 1
   { what: 'The rigid-body solver', count: '1,996,043 steps', result: 'identical', report: 'ode_stage1.md' },
   // docs/port/whole_car.md, section 1 and the results table
   { what: 'A whole car', count: '49 drives, 228,184 steps', result: 'identical', report: 'whole_car.md' },
   // docs/port/tracks.md, section 1
-  { what: 'Every track', count: '8,800,000 ray casts; 89 drives, 2,752,168 steps', result: 'zero differences', report: 'tracks.md' },
+  { what: 'Every track', count: '8,800,000 ray casts; 89 drives, 2,752,168 steps', result: 'zero differences (one value is left out on the drag strips)', report: 'tracks.md' },
   // docs/port/audio.md, section 1
   { what: 'Sound', count: '18 drives, 16,704,338 FMOD calls', result: 'every argument bit-equal', report: 'audio.md' },
   // docs/port/renderer_car.md, summary
@@ -57,7 +57,7 @@ const PROOFS: { what: string; count: string; result: string; report: string }[] 
   ogImage={ogImage}
 >
   <p>
-    There are four steps, and every part of the game goes through all of them: decompile the original, map what it
+    There are four steps, and every part that is ported goes through all of them: decompile the original, map what it
     does, port it to Rust one to one, and prove the port by running it next to the original's own code until every
     bit matches.
   </p>
@@ -111,8 +111,8 @@ const PROOFS: { what: string; count: string; result: string; report: string }[] 
   <!-- docs/port/ode_stage1.md, the table of differences (rows 1 and 2) and section 1 -->
   <p>
     The same goes for source code, where there is any. The physics library's source is public, but a literal port
-    of it matched the game on only 54 % of the steps of a car: the compiler had turned some sums into packed
-    four-lane additions, which add up in a different order. So the game's machine code was followed, not the source
+    of it matched the game on only 54 % of the steps of a car: the game's machine code adds some sums in packed
+    four-lane blocks, which add up in a different order. So the game's machine code was followed, not the source
     text.
   </p>
 
@@ -267,10 +267,11 @@ const PROOFS: { what: string; count: string; result: string; report: string }[] 
     </li>
     <!-- docs/port/audio.md section 5.2 -->
     <li><strong>The sound mix.</strong> The calls are identical; the mixed samples are not, because FMOD is random.</li>
-    <!-- docs/port/postfx.md section 9; docs/port/renderer_core.md lines 120-123 -->
+    <!-- docs/port/postfx.md line 61 and section 9; docs/port/renderer_core.md lines 120-123 (the inputs the test hands to both sides) -->
     <li>
       <strong>The picture.</strong> The game's post-processing filters are not ported yet. The pixel proofs are for
-      the renderer without them.
+      the renderer without them. And the test gives both sides some of the same inputs (the track models, the
+      camera), so a mistake in those would not show as a difference.
     </li>
     <!-- docs/port/drivetrain.md section 6.3; docs/port/whole_car.md sections 3.4 and 6.3 -->
     <li>

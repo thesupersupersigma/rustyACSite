@@ -2,7 +2,7 @@
 ---
 title: "The grip mystery: it was CSP"
 date: 2026-10-11
-summary: rustyAC felt grippier than the real game in some corners. The physics matched bit for bit, so the difference had to be somewhere else. It was Custom Shaders Patch.
+summary: rustyAC felt grippier than the real game in some corners. The physics matched bit for bit, so the difference had to be somewhere else. The evidence points at Custom Shaders Patch.
 draft: true
 cover: gallery_heavy_clouds
 coverAlt: The Ferrari F2004 at Spa under heavy clouds, drawn by rustyAC
@@ -41,7 +41,7 @@ Most of it was ruled out. The session start values matched: the same compound, t
 Two CSP changes were proven from the game's own recording, though, with extended physics off:
 
 1. **The thin air**: 5.6 % less downforce and drag at the Bus Stop.
-2. **A different tyre pressure law.** In the plain game a tyre's pressure follows its core temperature as `10 + 0.16 × (core − 26)` psi. The recording fits `10.97 + 0.084 × (core − 26)` instead, on all four wheels within 0.03 psi over three laps. Hot tyres had about 6 psi less: 18.8 against 24.9 psi at the Bus Stop.
+2. **A different tyre pressure law.** In the plain game this car's tyre pressure follows its core temperature as `10 + 0.16 × (core − 26)` psi (the 10 is the car's cold pressure). The recording fits `10.97 + 0.084 × (core − 26)` instead, on all four wheels within 0.03 psi over three laps. Hot tyres had about 6 psi less: 18.8 against 24.9 psi at the Bus Stop.
 
 Together they are worth about 2 % of the speed the corner can be taken at. Real, but not a spin.
 
@@ -71,7 +71,7 @@ In the end the answer came from the simplest experiment: switch CSP off in the g
 
 <!-- docs/port/grip_investigation.md lines 9-19 (telemetry runs of 2026-10-08) -->
 
-The driver's own spread from one lap to the next (65.8 against 68.9 km/h in the game, 59.8 against 72.7 in rustyAC) is bigger than the gap between the two programs. And the driver reported that with CSP off, the Bus Stop in the real game felt "a lot different".
+At the Bus Stop the lowest speeds fall in the same range. The driver's own spread from one lap to the next (65.8 against 68.9 km/h in the game, 59.8 against 72.7 in rustyAC) is bigger than the gap between the two programs. And the driver reported that with CSP off, the Bus Stop in the real game felt "a lot different".
 
 The report's conclusion: the extra difficulty is CSP, not a rustyAC fault.
 
@@ -79,11 +79,11 @@ The report's conclusion: the extra difficulty is CSP, not a rustyAC fault.
 
 ## What is still open
 
-Which CSP option does it is not known. The best remaining suspect is its handling of collisions between the car's body and the ground, which is switched on by default and runs on CSP's own physics code. That is a suspicion, not a result: the run that would test it, one option changed at a time, has not been done.
+Which CSP option does it is not known. The best remaining suspect is its handling of collisions between the car's body and the ground, which is switched on by default and runs on CSP's own physics code. That is a suspicion, not a result. One crude try (letting the car's whole body touch the ground at all times) stopped the car on a kerb half-way round its first lap, which was too crude to stand for CSP's rule. The proper run, one option changed at a time, is planned; the report has no result for it.
 
-It is also worth saying what the last test was not. It used a different car from the one in the original complaint, and it compares a person's laps, not recordings. It shows that the two programs agree within what one driver can repeat. The bit-for-bit proof is a separate thing, and it is against the game's own code.
+It is also worth saying what the last test was not. It used a different car from the one in the original complaint, and it compares a person's laps, not recordings. It is two laps in each program by one driver. It shows that the Bus Stop speeds of the two programs fall in the same range, within what one driver can repeat. The bit-for-bit proof is a separate thing, and it is against the game's own code.
 
-<!-- docs/port/grip_investigation.md lines 39-41 and 69-74 (the remaining suspect; run 6 not done) -->
+<!-- docs/port/grip_investigation.md lines 39-41 and 69-74 (the remaining suspect; run 6 planned); section 5.2, last row (the crude try, 51 % of the lap) -->
 
 For rustyAC the rule stays simple. It is the car of plain `acs.exe`. If CSP's behaviour is ever added, it will be something you switch on.
 
