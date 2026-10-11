@@ -53,6 +53,9 @@ function pruneUnusedSources() {
 export default defineConfig({
   site: 'https://rustyac.com',
   output: 'static',
+  // Off on purpose: with it on, a line break between a word and a link (or <code>, <strong>) in an
+  // .astro file is removed, and the two run together in the page.
+  compressHTML: false,
   integrations: [
     sitemap({
       filter: (page) => !NOT_IN_SITEMAP.some((hidden) => new URL(page).pathname.replace(/\/?$/, '/') === hidden),
