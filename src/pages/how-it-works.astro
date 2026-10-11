@@ -1,9 +1,287 @@
 ---
-// Placeholder page so no link is dead. Task 04 replaces it.
-import Base from '../layouts/Base.astro';
-import StubPage from '../components/StubPage.astro';
+import Page from '../layouts/Page.astro';
+import ImageFigure from '../components/ImageFigure.astro';
+import PipelineDiagram from '../components/PipelineDiagram.astro';
+import OracleDiagram from '../components/OracleDiagram.astro';
+import chase from '../assets/screenshots/gallery_f2004_spa_chase.webp';
+import cockpit from '../assets/screenshots/gallery_f2004_cockpit.webp';
+import trackside from '../assets/screenshots/gallery_f2004_spa_trackside.webp';
+import { LINKS } from '../lib/site';
+import { shareImage } from '../lib/og';
+
+const ogImage = await shareImage(trackside, 'The Ferrari F2004 passing the grandstand at Spa, drawn by rustyAC.');
+
+const description =
+  'How rustyAC rebuilds Assetto Corsa in Rust and proves it: decompile acs.exe with its debug symbols, map each system, port it one to one, then compare every bit against the original game’s own code.';
+
+const TOC = [
+  { id: 'decompile', label: '1. Decompile' },
+  { id: 'map', label: '2. Map' },
+  { id: 'port', label: '3. Port' },
+  { id: 'prove', label: '4. Prove' },
+  { id: 'maths', label: 'The maths library' },
+  { id: 'fma3', label: 'The FMA3 finding' },
+  { id: 'bit-exact', label: 'What "bit-exact" means here' },
+];
+
+const MAP = `${LINKS.github}/blob/master/docs/map/`;
+const PORT = `${LINKS.github}/blob/master/docs/port/`;
+const ORACLE = `${LINKS.github}/blob/master/docs/oracle/`;
+
+// One row per proof. The source of each number is the report in the last field.
+const PROOFS: { what: string; count: string; result: string; report: string }[] = [
+  // docs/port/sctm.md, section 1
+  { what: 'The tyre formula', count: '329,734 rows, seven numbers each', result: 'zero differences', report: 'sctm.md' },
+  // docs/port/tyre_step.md, section 1
+  { what: 'A whole tyre', count: '97,800 steps', result: 'the same in every step', report: 'tyre_step.md' },
+  // docs/port/ode_stage1.md, section 1
+  { what: 'The rigid-body solver', count: '1,996,043 steps', result: 'identical', report: 'ode_stage1.md' },
+  // docs/port/whole_car.md, section 1 and the results table
+  { what: 'A whole car', count: '49 drives, 228,184 steps', result: 'identical', report: 'whole_car.md' },
+  // docs/port/tracks.md, section 1
+  { what: 'Every track', count: '8,800,000 ray casts; 89 drives, 2,752,168 steps', result: 'zero differences', report: 'tracks.md' },
+  // docs/port/audio.md, section 1
+  { what: 'Sound', count: '18 drives, 16,704,338 FMOD calls', result: 'every argument bit-equal', report: 'audio.md' },
+  // docs/port/renderer_car.md, summary
+  { what: 'The car, drawn', count: '27 sequences, 2,353 frames', result: 'same commands, same pixels', report: 'renderer_car.md' },
+  // docs/port/web.md, section 3.2
+  { what: 'The browser build', count: '160 drives, 1,787,777 steps', result: 'equal to the desktop', report: 'web.md' },
+];
 ---
 
-<Base title="How it works" description="How rustyAC is ported and checked. This page is being written." noindex>
-  <StubPage title="How it works">This page is being written. The technical reports are on GitHub in the meantime.</StubPage>
-</Base>
+<Page
+  title="How it works"
+  intro="rustyAC is not written to feel like Assetto Corsa. It is written to compute the same numbers, and then made to prove it."
+  description={description}
+  toc={TOC}
+  ogImage={ogImage}
+>
+  <p>
+    There are four steps, and every part of the game goes through all of them: decompile the original, map what it
+    does, port it to Rust one to one, and prove the port by running it next to the original's own code until every
+    bit matches.
+  </p>
+
+  <PipelineDiagram />
+
+  <h2 id="decompile">1. Decompile</h2>
+  <!-- rustyAC docs/map/physics_engine.md line 3 (version, date); docs/map/yebis.md line 3 (size); docs/map/tyre.md lines 3-4 (Ghidra 12.1.2, the PDB's names); brainstorm.md section 0 (acs.pdb, 66 MB) -->
+  <p>
+    Assetto Corsa is one native program, <code>acs.exe</code> (game version 1.16.4, built on 2018-01-10,
+    22,890,776 bytes). It ships with its debug symbols, <code>acs.pdb</code>, a 66 MB file that holds the real names
+    of the game's functions and data. Loaded into Ghidra 12 together, the decompiler shows
+    <code>Tyre::addTyreForcesV10</code> where it would otherwise show an address.
+  </p>
+  <!-- docs/map/car.md section 5.1 (7,453 functions); docs/map/physics_engine.md lines 43-48 (ODE 0.13.1, 609 functions) -->
+  <p>
+    All 7,453 hand-written functions of the game were decompiled. The symbols also show what the game is built on:
+    its rigid-body physics is ODE 0.13.1, an open-source library, compiled into the program (609 functions of it).
+  </p>
+
+  <h2 id="map">2. Map</h2>
+  <!-- docs/map/car.md, index and section 5.1 item 3 -->
+  <p>
+    Before any Rust is written, each system gets a written report: what its functions do, in what order, with which
+    constants, and which file each number comes from. There are sixteen of these maps, from the tyre to the
+    force-feedback number.
+  </p>
+  <p>
+    Each map was then attacked by a second, independent reviewer: 658 claims were checked against the code, and 54
+    were found wrong and fixed. Every address in every document is checked by a script.
+  </p>
+  <p>
+    A few to read:
+    <a href={`${MAP}car.md`} rel="noopener">the whole car</a>,
+    <a href={`${MAP}car_step.md`} rel="noopener">one physics step</a>,
+    <a href={`${MAP}tyre.md`} rel="noopener">the tyre</a>,
+    <a href={`${MAP}physics_engine.md`} rel="noopener">the physics engine</a>.
+  </p>
+
+  <h2 id="port">3. Port</h2>
+  <!-- docs/port/sctm.md section 4 (transcribed from the disassembly; the regrouped products); docs/port/awd_ers.md lines 77-79 -->
+  <p>
+    The port is Rust, one to one: the same functions, the same fields, the same order of operations. The rule that
+    makes it work is to <strong>transcribe from the disassembly, not from the decompiler's pseudo-C</strong>.
+  </p>
+  <p>
+    The pseudo-C is right about <em>what</em> is computed, but it regroups arithmetic. In the tyre formula it shows
+    <code>(cos · speed) · slipRatio</code> where the real code computes <code>cos · (speed · slipRatio)</code>. With
+    floating-point numbers those two can differ in the last bit, and a last bit is the whole point.
+  </p>
+  <!-- docs/port/ode_stage1.md, the table of differences (rows 1 and 2) and section 1 -->
+  <p>
+    The same goes for source code, where there is any. The physics library's source is public, but a literal port
+    of it matched the game on only 54 % of the steps of a car: the compiler had turned some sums into packed
+    four-lane additions, which add up in a different order. So the game's machine code was followed, not the source
+    text.
+  </p>
+
+  <ImageFigure
+    src={chase}
+    alt="The Ferrari F2004 at speed at Spa, seen from the chase camera in rustyAC"
+    caption="The F2004 at Spa, 175 km/h, drawn by rustyAC with Assetto Corsa's own shaders."
+  />
+
+  <h2 id="prove">4. Prove</h2>
+  <!-- docs/map/tyre_oracle.md, part C "How it calls AC's code"; docs/oracle/car_oracle.md lines 75-76 -->
+  <p>
+    The test tool is called <strong>the oracle</strong>. It loads the real <code>acs.exe</code> into its own
+    process as a plain block of code. The game never starts: its entry point and start-up code never run. The
+    oracle then calls the game's own functions directly, by the addresses from <code>acs.pdb</code>, and asks the
+    Rust port the same question. The two answers are compared as bit patterns, not as rounded numbers.
+  </p>
+
+  <OracleDiagram />
+
+  <p>
+    It refuses to run against any other build of the game than the one that was decompiled. And the comparison is
+    checked too: deliberate small faults were put into the Rust car, one at a time (24 in the whole car), and each
+    one was caught.
+  </p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>What</th><th>How much</th><th>Result</th><th>Report</th></tr>
+      </thead>
+      <tbody>
+        {
+          PROOFS.map((row) => (
+            <tr>
+              <td>{row.what}</td>
+              <td class="mono">{row.count}</td>
+              <td>{row.result}</td>
+              <td>
+                <a href={`${PORT}${row.report}`} rel="noopener">
+                  read
+                </a>
+              </td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <h3>The car oracle</h3>
+  <!-- docs/oracle/car_oracle.md, summary (lines 36-49) and section 2.1 -->
+  <p>
+    For a whole car, the oracle builds the game's real car, a Ferrari F2004 with all its parts, by calling the game's
+    own constructors. It gives it a flat road, a scripted driver and a clock that only moves when told to. Twelve
+    drives were recorded this way, 70,673 steps in all; each was run twice from scratch, and both runs give the same
+    checksum over every byte. Those recordings are what the Rust car is held against.
+    <a href={`${ORACLE}car_oracle.md`} rel="noopener">The car oracle's report</a>.
+  </p>
+
+  <h3>The render oracle</h3>
+  <!-- docs/port/renderer_core.md sections 1 and 3; docs/port/postfx.md lines 56-59 -->
+  <p>
+    The renderer is proven the same way. The game's own renderer and the port each draw the same frame on WARP,
+    Windows' software graphics card, which gives the same pixels on every run. Two things are compared: the list of
+    Direct3D 11 commands, as text, and the finished picture, byte by byte. On the first 21 frames the two command
+    lists were identical line for line (up to 5,943 commands a frame) and the pictures identical in every byte.
+    Later tasks added whole sequences, and a real graphics card: on a Radeon the port matches the game's renderer
+    with 1, 2, 4 and 8 anti-aliasing samples.
+  </p>
+
+  <ImageFigure
+    src={cockpit}
+    alt="The cockpit of the Ferrari F2004 at Spa in rustyAC, with the steering wheel display lit"
+    caption="The F2004's cockpit: the dials, the display and the mirrors are the game's own, drawn by the port."
+  />
+
+  <h3>The audio oracle</h3>
+  <!-- docs/port/audio.md sections 1, 4 and 5.2 -->
+  <p>
+    Sound is Assetto Corsa's own: rustyAC loads the game's FMOD libraries and sound banks from your install. The
+    oracle logs every call into FMOD from the game and from the port. On 18 recorded drives the port makes exactly
+    the calls the game makes: 16,704,338 of them, every argument bit-equal. The sound itself is written to WAV
+    files without a sound card, faster than real time.
+  </p>
+  <p>
+    Those WAV files are not identical, and that is FMOD: it mixes with random numbers of its own, so two runs of the
+    game's own code never gave the same file either. The port's sound is held to the game's own run-to-run
+    difference instead.
+  </p>
+
+  <h2 id="maths">The maths library</h2>
+  <!-- docs/port/web.md section 2.1 (the imports), section 1 and the proof table (lines 62-68, 119-160) -->
+  <p>
+    The game does not compute its own sines and powers. It calls <code>sinf</code>, <code>cosf</code>,
+    <code>powf</code> and a few more from <code>MSVCR120.dll</code>, the Visual C++ 2013 runtime. A different
+    <code>sinf</code> would be a different game, so on the desktop rustyAC calls that same DLL.
+  </p>
+  <p>
+    A browser cannot load a DLL. So the ten functions were read out of the DLL's machine code and written again in
+    Rust, instruction by instruction, and then proven:
+  </p>
+  <ul>
+    <li>
+      for each of the seven one-argument functions, <strong>every one of the 4,294,967,296 possible inputs</strong>
+      gives the same bits as the DLL
+    </li>
+    <li>
+      the two-argument functions (<code>powf</code>, <code>atan2f</code>) have too many input pairs to try them
+      all, so they were tried on 59 billion more inputs: not one difference
+    </li>
+  </ul>
+  <p>
+    That copy is what lets the <a href="/play">browser preview</a> stay exact. It is also the desktop's fallback
+    when the DLL is not installed.
+  </p>
+
+  <h2 id="fma3">The FMA3 finding</h2>
+  <!-- docs/port/web.md section 1 item 2 (lines 68-72), section 2.1 (lines 96-101) and the fma3-off table (lines 162-176) -->
+  <p>
+    Reading the DLL turned up a surprise about the game itself. The DLL has two versions of six of these functions
+    and picks one by the processor: one for CPUs with the FMA3 instructions (everything since about 2013), one for
+    older ones. The two do not give the same results: 44,232 of the 4.29 billion <code>sinf</code> inputs differ,
+    and 18,018 for <code>cosf</code>.
+  </p>
+  <p>
+    So <strong>Assetto Corsa is not bit-exact with itself</strong>: a drive recorded on a pre-2013 processor would
+    not replay bit for bit on a modern one, in the real game either. rustyAC's Rust copy is the modern path, the
+    one the game runs on any current processor.
+  </p>
+
+  <h2 id="bit-exact">What "bit-exact" means here</h2>
+  <!-- docs/port/sctm.md lines 30-31 (the definition); docs/port/web.md lines 99-101, 174-176, 306-310 -->
+  <p>
+    It means this and nothing more: <strong
+      >for the same inputs, on the same processor path, the port's numbers have the same bits as the numbers from
+      the game's own code.</strong
+    > The game is plain Assetto Corsa 1.16.4, without Custom Shaders Patch.
+  </p>
+  <p>What it does not mean, and what is not proven yet:</p>
+  <ul>
+    <!-- docs/port/web.md section 8, items 1 and 2 -->
+    <li>
+      <strong>Older processors.</strong> The maths path of CPUs without FMA3 is not ported. One more instruction
+      gives different last bits on Intel and AMD processors; the browser build computes what an Intel desktop
+      computes.
+    </li>
+    <!-- docs/port/web.md lines 309-320 -->
+    <li>
+      <strong>The browser.</strong> The 160-drive proof runs the physics as WebAssembly outside a browser. In the
+      browser itself the check is a 10,000-step test drive on three car and track pairs.
+    </li>
+    <!-- docs/port/audio.md section 5.2 -->
+    <li><strong>The sound mix.</strong> The calls are identical; the mixed samples are not, because FMOD is random.</li>
+    <!-- docs/port/postfx.md section 9; docs/port/renderer_core.md lines 120-123 -->
+    <li>
+      <strong>The picture.</strong> The game's post-processing filters are not ported yet. The pixel proofs are for
+      the renderer without them.
+    </li>
+    <!-- docs/port/drivetrain.md section 6.3; docs/port/whole_car.md sections 3.4 and 6.3 -->
+    <li>
+      <strong>Code no test reached.</strong> A recorded drive only proves the branches it takes. The reports list
+      the ones that were ported from the disassembly but never run against the game.
+    </li>
+    <!-- docs/port/tracks.md section 8; docs/port/several_cars.md -->
+    <li><strong>What is not ported at all</strong>: AI drivers, race rules, menus. See <a href="/progress">progress</a>.</li>
+  </ul>
+  <p>
+    All of it is in the open: the <a href={LINKS.docs} rel="noopener">reports</a> say what was run, how to run it
+    again, and what was left out.
+  </p>
+</Page>

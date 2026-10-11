@@ -1,0 +1,63 @@
+---
+// The oracle as one picture: the same inputs go to the game's own functions and to the Rust port,
+// side by side, and every bit of what comes out is compared. Styles: PipelineDiagram.astro.
+---
+
+<figure class="diagram">
+  <div class="diagram__scroll" tabindex="0" role="group" aria-label="Diagram: how the oracle compares the game with the port">
+    <svg viewBox="0 0 960 372" role="img" aria-labelledby="oracle-title oracle-desc">
+      <title id="oracle-title">The oracle</title>
+      <desc id="oracle-desc">
+        The same inputs, step by step, go to two places: the real acs.exe, mapped into the test program and called
+        by the addresses from its debug symbols, and rustyAC's Rust port of the same functions. The numbers both
+        give back are compared bit by bit. Either all are equal, or the port is fixed and the comparison runs again.
+      </desc>
+      <defs>
+        <marker id="oracle-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M1 1 9 5 1 9" class="d-head" />
+        </marker>
+      </defs>
+
+      {/* inputs */}
+      <rect x="16" y="126" width="196" height="120" rx="12" class="d-box" />
+      <text x="34" y="156" class="d-mono">inputs</text>
+      <text x="34" y="184" class="d-strong">The same for both</text>
+      <text x="34" y="207" class="d-text">the driver's controls,</text>
+      <text x="34" y="226" class="d-text">step by step</text>
+
+      {/* the game */}
+      <rect x="296" y="20" width="318" height="136" rx="12" class="d-box" />
+      <text x="314" y="50" class="d-mono">acs.exe, the real game</text>
+      <text x="314" y="78" class="d-strong">The game's own functions</text>
+      <text x="314" y="102" class="d-text">mapped into the test program</text>
+      <text x="314" y="121" class="d-text">and called by their address</text>
+      <text x="314" y="140" class="d-text">from acs.pdb</text>
+
+      {/* the port */}
+      <rect x="296" y="216" width="318" height="136" rx="12" class="d-box" />
+      <text x="314" y="246" class="d-mono">rustyAC, the port</text>
+      <text x="314" y="274" class="d-strong">The same functions in Rust</text>
+      <text x="314" y="298" class="d-text">rewritten one to one,</text>
+      <text x="314" y="317" class="d-text">in the same order of operations</text>
+
+      {/* compare */}
+      <rect x="698" y="118" width="246" height="136" rx="12" class="d-box d-box--accent" />
+      <text x="716" y="148" class="d-mono">compare</text>
+      <text x="716" y="176" class="d-strong">Every bit of every number</text>
+      <text x="716" y="200" class="d-text">all equal: done</text>
+      <text x="716" y="219" class="d-text">one bit off: not done,</text>
+      <text x="716" y="238" class="d-text">fix the port and run again</text>
+
+      <path d="M212 166 H254 V88 H290" class="d-line" marker-end="url(#oracle-arrow)" />
+      <path d="M212 206 H254 V284 H290" class="d-line" marker-end="url(#oracle-arrow)" />
+      <path d="M614 88 H656 V166 H692" class="d-line" marker-end="url(#oracle-arrow)" />
+      <path d="M614 284 H656 V206 H692" class="d-line" marker-end="url(#oracle-arrow)" />
+      <text x="664" y="80" class="d-mono">numbers out</text>
+      <text x="664" y="302" class="d-mono">numbers out</text>
+    </svg>
+  </div>
+  <figcaption class="muted">
+    The game is never started. Its code is only borrowed, one function at a time, to answer the same question the
+    port is asked.
+  </figcaption>
+</figure>
