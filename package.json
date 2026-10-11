@@ -11,6 +11,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",
+    "test": "vitest run",
     "og": "node scripts/make-brand.mjs",
     "shots": "node scripts/shots.mjs"
   },
@@ -27,7 +28,8 @@
     "@types/three": "0.186.0",
     "playwright": "1.64.0",
     "sharp": "0.35.5",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "vitest": "5.0.3"
   },
   "license": "GPL-3.0-or-later"
 }
