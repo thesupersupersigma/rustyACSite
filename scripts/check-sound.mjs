@@ -3,7 +3,7 @@
 //   - the homepage downloads no audio and creates no AudioContext before the visitor asks for sound,
 //     not even after scrolling the whole page and revving the engine;
 //   - one click on the speaker creates one context, downloads the clips in one format and starts;
-//   - scrolling the stage away and hiding nothing else suspends it, coming back resumes it;
+//   - scrolling the stage away or hiding the tab suspends it, coming back resumes it;
 //   - the choice is remembered, and on the next visit sound waits for the first press;
 //   - the same with reduced motion.
 //
@@ -168,6 +168,20 @@ const waitOn = (page) => page.waitForFunction(() => window.__f2004.sound.state()
   check('scrolled away: the context is suspended', JSON.stringify(await contexts()) === '["suspended"]', JSON.stringify(await contexts()));
   await gotoProgress(page, 0.5, 900);
   check('scrolled back: the context runs again', JSON.stringify(await contexts()) === '["running"]', JSON.stringify(await contexts()));
+
+  // the tab is hidden and shown again (faked: a headless page cannot really be put in the background)
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.waitForTimeout(700);
+  check('tab hidden: the context is suspended', JSON.stringify(await contexts()) === '["suspended"]', JSON.stringify(await contexts()));
+  await page.evaluate(() => {
+    delete document.visibilityState;
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.waitForTimeout(500);
+  check('tab shown: the context runs again', JSON.stringify(await contexts()) === '["running"]', JSON.stringify(await contexts()));
 
   // ---- 4. a full burnout with sound on: nothing may throw -------------------------------------------------
   const box = await page.locator('.rev__btn').boundingBox();
