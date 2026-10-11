@@ -110,7 +110,8 @@ export interface BenchResult {
 
 /**
  * The speaker button's state. `armed`: sound was on during the last visit and starts with the first
- * press of the rev button or the speaker (a browser will not let it start by itself).
+ * press of the rev button or the speaker (a browser will not let it start by itself). Until then the
+ * button looks off, with a "tap to resume" hint.
  */
 export type SoundState = 'off' | 'armed' | 'loading' | 'on';
 

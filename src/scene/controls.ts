@@ -119,8 +119,23 @@ const CSS = /* css */ `
 .rev__sound.is-on { color: #f5f5f5; }
 .rev__sound svg { width: 22px; height: 22px; pointer-events: none; }
 .rev__sound .rev__waves { display: none; }
-.rev__sound:not(.is-off) .rev__waves { display: inline; }
+.rev__sound.is-on .rev__waves { display: inline; }
 .rev__sound:not(.is-off) .rev__mute { display: none; }
+/* a return visit: sound was on last time, and it waits for a press before it may play */
+.rev__sound.is-armed::before {
+  content: 'tap to resume';
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgb(14 14 14 / 0.7);
+  color: rgb(245 245 245 / 0.82);
+  font: 500 11px/1.4 'JetBrains Mono', ui-monospace, monospace;
+  white-space: nowrap;
+  pointer-events: none;
+}
 /* loading: a ring that fills as the clips arrive (no spinning, so it is fine with reduced motion) */
 .rev__sound.is-loading::after {
   content: '';
@@ -155,11 +170,15 @@ const PIT_KEY_DELAY_MS = 600;
 
 const LABEL: Record<ControlMode, string> = { rev: 'Hold to rev', pit: 'Pit stop', busy: 'Pit stop' };
 
-/** The speaker button per state: its accessible name, whether it counts as pressed, and its tooltip. */
+/**
+ * The speaker button per state: its accessible name, whether it counts as pressed, and its tooltip.
+ * It only looks pressed while sound is really playing. `armed` (sound was on during the last visit)
+ * looks off and carries a "tap to resume" hint; `loading` is the bare speaker with its ring.
+ */
 const SOUND: Record<SoundState, { label: string; pressed: boolean; title: string }> = {
   off: { label: 'Sound off', pressed: false, title: 'Turn sound on' },
-  armed: { label: 'Sound on', pressed: true, title: 'Sound starts with your first rev' },
-  loading: { label: 'Sound on', pressed: true, title: 'Loading the sound' },
+  armed: { label: 'Sound off, tap to resume', pressed: false, title: 'Tap to resume the sound (or just rev)' },
+  loading: { label: 'Loading the sound', pressed: false, title: 'Loading the sound' },
   on: { label: 'Sound on', pressed: true, title: 'Turn sound off' },
 };
 
@@ -294,11 +313,12 @@ export class Controls {
     else b.removeAttribute('aria-disabled');
   }
 
-  /** Shows the speaker button as off, on, loading, or on-but-waiting-for-a-press. */
+  /** Shows the speaker button as off, on, loading, or off-but-ready-to-resume. */
   setSound(state: SoundState): void {
     const b = this.soundButton;
     const look = SOUND[state];
-    b.classList.toggle('is-off', state === 'off');
+    b.classList.toggle('is-off', state === 'off' || state === 'armed');
+    b.classList.toggle('is-armed', state === 'armed');
     b.classList.toggle('is-on', state === 'on');
     b.classList.toggle('is-loading', state === 'loading');
     b.setAttribute('aria-label', look.label);

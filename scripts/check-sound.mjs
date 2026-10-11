@@ -223,7 +223,12 @@ const waitOn = (page) => page.waitForFunction(() => window.__f2004.sound.state()
   const mark = audio().length;
   await toStage(page);
   check('next visit: state is armed, nothing made or downloaded yet', (await state()) === 'armed' && (await contexts()).length === 0 && audio().length === mark, `${await state()}, ${(await contexts()).length} contexts, ${audio().length - mark} requests`);
-  check('next visit: the speaker shows "Sound on"', (await speaker(page).getAttribute('aria-label')) === 'Sound on');
+  check(
+    'next visit: the speaker looks off, not pressed, with the "tap to resume" hint',
+    (await speaker(page).getAttribute('aria-label')) === 'Sound off, tap to resume' &&
+      (await speaker(page).getAttribute('aria-pressed')) === 'false' &&
+      (await speaker(page).evaluate((b) => b.classList.contains('is-off') && getComputedStyle(b, '::before').content.includes('tap to resume'))),
+  );
   await holdRev(page, 400);
   await waitOn(page);
   await page.waitForTimeout(300);
