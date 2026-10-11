@@ -15,7 +15,9 @@
     "og": "node scripts/make-brand.mjs",
     "screenshots": "node scripts/use-screenshots.mjs",
     "bench": "node scripts/bench.mjs",
-    "shots": "node scripts/shots.mjs"
+    "shots": "node scripts/shots.mjs",
+    "audio": "node scripts/encode-audio.mjs",
+    "audio:check": "node scripts/check-audio.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "3.7.4",
@@ -28,6 +30,7 @@
   "devDependencies": {
     "@astrojs/check": "0.9.10",
     "@types/three": "0.186.0",
+    "ffmpeg-static": "5.3.0",
     "playwright": "1.64.0",
     "sharp": "0.35.5",
     "typescript": "6.0.3",

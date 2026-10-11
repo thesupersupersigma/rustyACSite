@@ -1,0 +1,398 @@
+{
+ "note": "Made by scripts/encode-audio.mjs from assets-src/media/audio/. Loop points are in seconds of the decoded file.",
+ "rustyacVersion": "0.23.1",
+ "sampleRate": 48000,
+ "padSeconds": 0.2,
+ "formats": [
+  {
+   "ext": "webm",
+   "mime": "audio/webm; codecs=\"opus\""
+  },
+  {
+   "ext": "m4a",
+   "mime": "audio/mp4; codecs=\"mp4a.40.2\""
+  }
+ ],
+ "clips": [
+  {
+   "id": "engine_on_4000",
+   "kind": "loop",
+   "group": "engine",
+   "rpm": 4000,
+   "throttle": 1,
+   "seconds": 7.75483,
+   "peakDb": -12.07,
+   "files": {
+    "webm": {
+     "file": "engine_on_4000.webm",
+     "bytes": 91985,
+     "seconds": 8.15483,
+     "loopStart": 0.2,
+     "loopEnd": 7.954833,
+     "seamJump": 105
+    },
+    "m4a": {
+     "file": "engine_on_4000.m4a",
+     "bytes": 132814,
+     "seconds": 8.17067,
+     "loopStart": 0.2,
+     "loopEnd": 7.954833,
+     "seamJump": 193
+    }
+   }
+  },
+  {
+   "id": "engine_off_4000",
+   "kind": "loop",
+   "group": "engine",
+   "rpm": 4000,
+   "throttle": 0,
+   "seconds": 7.75483,
+   "peakDb": -13.94,
+   "files": {
+    "webm": {
+     "file": "engine_off_4000.webm",
+     "bytes": 92034,
+     "seconds": 8.15483,
+     "loopStart": 0.2,
+     "loopEnd": 7.954833,
+     "seamJump": 188
+    },
+    "m4a": {
+     "file": "engine_off_4000.m4a",
+     "bytes": 132838,
+     "seconds": 8.17067,
+     "loopStart": 0.2,
+     "loopEnd": 7.954833,
+     "seamJump": 176
+    }
+   }
+  },
+  {
+   "id": "engine_on_7000",
+   "kind": "loop",
+   "group": "engine",
+   "rpm": 7000,
+   "throttle": 1,
+   "seconds": 7.80333,
+   "peakDb": -5.8,
+   "files": {
+    "webm": {
+     "file": "engine_on_7000.webm",
+     "bytes": 71978,
+     "seconds": 8.20333,
+     "loopStart": 0.2,
+     "loopEnd": 8.003333,
+     "seamJump": 747
+    },
+    "m4a": {
+     "file": "engine_on_7000.m4a",
+     "bytes": 134095,
+     "seconds": 8.21333,
+     "loopStart": 0.2,
+     "loopEnd": 8.003333,
+     "seamJump": 435
+    }
+   }
+  },
+  {
+   "id": "engine_off_7000",
+   "kind": "loop",
+   "group": "engine",
+   "rpm": 7000,
+   "throttle": 0,
+   "seconds": 7.7565,
+   "peakDb": -8.42,
+   "files": {
+    "webm": {
+     "file": "engine_off_7000.webm",
+     "bytes": 71034,
+     "seconds": 8.1565,
+     "loopStart": 0.2,
+     "loopEnd": 7.9565,
+     "seamJump": 138
+    },
+    "m4a": {
+     "file": "engine_off_7000.m4a",
+     "bytes": 133110,
+     "seconds": 8.17067,
+     "loopStart": 0.2,
+     "loopEnd": 7.9565,
+     "seamJump": 313
+    }
+   }
+  },
+  {
+   "id": "engine_on_10000",
+   "kind": "loop",
+   "group": "engine",
+   "rpm": 10000,
+   "throttle": 1,
+   "seconds": 8.0275,
+   "peakDb": -3.01,
+   "files": {
+    "webm": {
+     "file": "engine_on_10000.webm",
+     "bytes": 80340,
+     "seconds": 8.4275,
+     "loopStart": 0.2,
+     "loopEnd": 8.2275,
+     "seamJump": 526
+    },
+    "m4a": {
+     "file": "engine_on_10000.m4a",
+     "bytes": 137833,
+     "seconds": 8.448,
+     "loopStart": 0.2,
+     "loopEnd": 8.2275,
+     "seamJump": 1336
+    }
+   }
+  },
+  {
+   "id": "engine_off_10000",
+   "kind": "loop",
+   "group": "engine",
+   "rpm": 10000,
+   "throttle": 0,
+   "seconds": 7.9895,
+   "peakDb": -4.43,
+   "files": {
+    "webm": {
+     "file": "engine_off_10000.webm",
+     "bytes": 72714,
+     "seconds": 8.3895,
+     "loopStart": 0.2,
+     "loopEnd": 8.1895,
+     "seamJump": 477
+    },
+    "m4a": {
+     "file": "engine_off_10000.m4a",
+     "bytes": 137159,
+     "seconds": 8.40533,
+     "loopStart": 0.2,
+     "loopEnd": 8.1895,
+     "seamJump": 170
+    }
+   }
+  },
+  {
+   "id": "engine_on_13000",
+   "kind": "loop",
+   "group": "engine",
+   "rpm": 13000,
+   "throttle": 1,
+   "seconds": 8.22433,
+   "peakDb": -3,
+   "files": {
+    "webm": {
+     "file": "engine_on_13000.webm",
+     "bytes": 84446,
+     "seconds": 8.62433,
+     "loopStart": 0.2,
+     "loopEnd": 8.424333,
+     "seamJump": 1200
+    },
+    "m4a": {
+     "file": "engine_on_13000.m4a",
+     "bytes": 141046,
+     "seconds": 8.64,
+     "loopStart": 0.2,
+     "loopEnd": 8.424333,
+     "seamJump": 524
+    }
+   }
+  },
+  {
+   "id": "engine_off_13000",
+   "kind": "loop",
+   "group": "engine",
+   "rpm": 13000,
+   "throttle": 0,
+   "seconds": 7.78033,
+   "peakDb": -7.62,
+   "files": {
+    "webm": {
+     "file": "engine_off_13000.webm",
+     "bytes": 87235,
+     "seconds": 8.18033,
+     "loopStart": 0.2,
+     "loopEnd": 7.980333,
+     "seamJump": 295
+    },
+    "m4a": {
+     "file": "engine_off_13000.m4a",
+     "bytes": 133503,
+     "seconds": 8.192,
+     "loopStart": 0.2,
+     "loopEnd": 7.980333,
+     "seamJump": 719
+    }
+   }
+  },
+  {
+   "id": "engine_on_16000",
+   "kind": "loop",
+   "group": "engine",
+   "rpm": 16000,
+   "throttle": 1,
+   "seconds": 8.24867,
+   "peakDb": -3.38,
+   "files": {
+    "webm": {
+     "file": "engine_on_16000.webm",
+     "bytes": 90611,
+     "seconds": 8.64867,
+     "loopStart": 0.2,
+     "loopEnd": 8.448667,
+     "seamJump": 1624
+    },
+    "m4a": {
+     "file": "engine_on_16000.m4a",
+     "bytes": 141396,
+     "seconds": 8.66133,
+     "loopStart": 0.2,
+     "loopEnd": 8.448667,
+     "seamJump": 501
+    }
+   }
+  },
+  {
+   "id": "engine_off_16000",
+   "kind": "loop",
+   "group": "engine",
+   "rpm": 16000,
+   "throttle": 0,
+   "seconds": 7.75633,
+   "peakDb": -3.89,
+   "files": {
+    "webm": {
+     "file": "engine_off_16000.webm",
+     "bytes": 85407,
+     "seconds": 8.15633,
+     "loopStart": 0.2,
+     "loopEnd": 7.956333,
+     "seamJump": 930
+    },
+    "m4a": {
+     "file": "engine_off_16000.m4a",
+     "bytes": 133010,
+     "seconds": 8.17067,
+     "loopStart": 0.2,
+     "loopEnd": 7.956333,
+     "seamJump": 973
+    }
+   }
+  },
+  {
+   "id": "limiter",
+   "kind": "loop",
+   "group": "limiter",
+   "rpm": 18800,
+   "throttle": 1,
+   "seconds": 7.7505,
+   "peakDb": -3.54,
+   "files": {
+    "webm": {
+     "file": "limiter.webm",
+     "bytes": 84688,
+     "seconds": 8.1505,
+     "loopStart": 0.2,
+     "loopEnd": 7.9505,
+     "seamJump": 1712
+    },
+    "m4a": {
+     "file": "limiter.m4a",
+     "bytes": 133369,
+     "seconds": 8.17067,
+     "loopStart": 0.2,
+     "loopEnd": 7.9505,
+     "seamJump": 1785
+    }
+   }
+  },
+  {
+   "id": "wheelspin",
+   "kind": "loop",
+   "group": "wheelspin",
+   "seconds": 7.82617,
+   "peakDb": -15.85,
+   "files": {
+    "webm": {
+     "file": "wheelspin.webm",
+     "bytes": 80801,
+     "seconds": 8.22617,
+     "loopStart": 0.2,
+     "loopEnd": 8.026167,
+     "seamJump": 8
+    },
+    "m4a": {
+     "file": "wheelspin.m4a",
+     "bytes": 134059,
+     "seconds": 8.23467,
+     "loopStart": 0.2,
+     "loopEnd": 8.026167,
+     "seamJump": 18
+    }
+   }
+  },
+  {
+   "id": "pit_wheelgun",
+   "kind": "oneshot",
+   "group": "pit",
+   "seconds": 1.01765,
+   "peakDb": -18.83,
+   "files": {
+    "webm": {
+     "file": "pit_wheelgun.webm",
+     "bytes": 9139,
+     "seconds": 1.01765
+    },
+    "m4a": {
+     "file": "pit_wheelgun.m4a",
+     "bytes": 16855,
+     "seconds": 1.024
+    }
+   }
+  },
+  {
+   "id": "pit_wheelgun_off",
+   "kind": "oneshot",
+   "group": "pit",
+   "seconds": 1.23458,
+   "peakDb": -20.83,
+   "files": {
+    "webm": {
+     "file": "pit_wheelgun_off.webm",
+     "bytes": 11117,
+     "seconds": 1.23458
+    },
+    "m4a": {
+     "file": "pit_wheelgun_off.m4a",
+     "bytes": 20416,
+     "seconds": 1.23733
+    }
+   }
+  },
+  {
+   "id": "backfire_1",
+   "kind": "oneshot",
+   "group": "backfire",
+   "throttle": 0,
+   "seconds": 0.47806,
+   "peakDb": -12.15,
+   "files": {
+    "webm": {
+     "file": "backfire_1.webm",
+     "bytes": 4774,
+     "seconds": 0.47806
+    },
+    "m4a": {
+     "file": "backfire_1.m4a",
+     "bytes": 7589,
+     "seconds": 0.49067
+    }
+   }
+  }
+ ]
+}
