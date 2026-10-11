@@ -1,9 +1,345 @@
 ---
-// Placeholder page so no link is dead. Task 04 replaces it.
-import Base from '../layouts/Base.astro';
-import StubPage from '../components/StubPage.astro';
+import Page from '../layouts/Page.astro';
+import Icon from '../components/Icon.astro';
+import ImageFigure from '../components/ImageFigure.astro';
+import Changelog from '../components/Changelog.astro';
+import heroBurnout from '../assets/screenshots/hero_burnout.webp';
+import { LINKS } from '../lib/site';
+import { shareImage } from '../lib/og';
+import { formatReleaseDate, formatSize, getReleases } from '../lib/release';
+
+const { latest, all } = await getReleases();
+const ogImage = await shareImage(heroBurnout, 'The Ferrari F2004 doing a burnout at Spa, drawn by rustyAC.');
+
+const description =
+  'Download rustyAC for Windows: one zip, nothing to install. You need your own copy of Assetto Corsa. What you need, the first run, the keys and the options.';
+
+const TOC = [
+  { id: 'need', label: 'What you need' },
+  { id: 'first-run', label: 'First run' },
+  { id: 'keys', label: 'Keys and gamepad' },
+  { id: 'options', label: 'Common options' },
+  { id: 'limits', label: 'Honest limits' },
+  { id: 'changelog', label: 'Changelog' },
+];
+
+// rustyAC packaging/HOW_TO_RUN.txt, section 3 "Keys". F9 is left out: the run guide and the program's
+// own --help disagree about it.
+const KEYS: [string, string][] = [
+  ['Left / Right, or A / D', 'steer'],
+  ['Up, or W', 'throttle'],
+  ['Down, or S', 'brake'],
+  ['Space, or E', 'gear up'],
+  ['Left Ctrl, or Q', 'gear down'],
+  ['Left Shift', 'clutch'],
+  ['F', 'DRS'],
+  ['B', 'handbrake'],
+  ['L', 'headlights'],
+  ['Alt + G', 'automatic gearbox on or off'],
+  ['T (with Shift: down)', 'traction control level up'],
+  ['Y (with Shift: down)', 'ABS level up'],
+  ['] and [', 'brake bias forward and rearward'],
+  ['F1, or C', 'next view: chase, chase 2, bonnet, bumper, dash, cockpit'],
+  ['F6', "the car's own cameras"],
+  ['R', 'reset the car to the spawn point'],
+  ['Shift + R', 'back onto the track where the car is'],
+  ['P or Pause', 'pause'],
+  ['Esc', 'quit'],
+];
+
+// the same section, "Xbox pad"
+const PAD: [string, string][] = [
+  ['Left stick', 'steer'],
+  ['RT / LT', 'throttle / brake'],
+  ['Y / X', 'gear up / gear down'],
+  ['A', 'clutch'],
+  ['LB', 'DRS'],
+  ['D-pad up / down', 'traction control level up / down'],
+  ['D-pad right / left', 'brake bias forward / back'],
+  ['Back held + D-pad up / down', 'ABS level up / down'],
+  ['Right stick press', 'next view'],
+  ['Back, a tap', 'reset the car to the spawn point'],
+  ['Back held 0.6 s, then let go', 'back onto the track where the car is'],
+  ['Start', 'pause'],
+];
+
+// HOW_TO_RUN.txt section 2 "Commands" and the program's own --help (crates/rustyac-game/src/cli.rs at
+// the tag v0.23.0). Only options that exist in the released build.
+const OPTIONS: [string, string][] = [
+  ['--track <name>', 'Drive on a track: its folder name, its name in the menu, or a part of either (--track laguna). Without it you get an endless flat road.'],
+  ['--layout <name>', 'Which layout of a track that has several (--track ks_nurburgring --layout layout_sprint_a).'],
+  ['--list-tracks', 'Lists every track and layout of your game, and which ones cannot be driven and why.'],
+  ['--car <name>', "Another car, by its folder name under content\\cars (--car ks_ferrari_488_gt3), or the path of a car's folder."],
+  ['--windowed', 'A window instead of borderless full screen.'],
+  ['--camera <view>', "The view to start on: chase, chase2, bonnet, bumper, dash, cockpit, or car0 for the car's first own camera."],
+  ['--graphics max', 'Built-in video settings at the highest values Assetto Corsa\u2019s launcher offers, instead of your own video settings. --graphics low is the other end.'],
+  ['--debug-view', 'The older, simpler picture instead of Assetto Corsa\u2019s renderer: fast, and it shows the physics.'],
+  ['--autodrive', 'Watch a simple driver follow the track\u2019s AI line. Needs --track.'],
+  ['--air, --road, --grip, --wind', 'Air and road temperature (\u00b0C), track grip (%) and wind (km/h), instead of the values from your last Assetto Corsa session.'],
+  ['--no-race-ini', 'Ignore your last session: 26 \u00b0C air, 30 \u00b0C road, full grip, no wind.'],
+  ['--setup <name>', 'A setup you saved in the game.'],
+  ['--volume <0 to 1>, --no-audio', 'Master volume, or no sound at all.'],
+  ['--ffb', 'Force feedback for a wheel (low strength).'],
+  ['--list-devices', 'The pads and wheels that were found, and the bindings.'],
+  ['--help', 'Every option.'],
+];
 ---
 
-<Base title="Download" description="Download rustyAC for Windows. This page is being written." noindex>
-  <StubPage title="Download">This page is being written. Until it is ready, every build is on the GitHub releases page.</StubPage>
-</Base>
+<Page
+  title="Download"
+  intro="One zip for Windows, nothing to install. You need your own copy of Assetto Corsa: rustyAC ships no game files."
+  description={description}
+  toc={TOC}
+  ogImage={ogImage}
+>
+  <section class="rel">
+    <div class="rel__card card">
+      <p class="eyebrow">Latest release</p>
+      <h2 class="rel__title">{latest.name}</h2>
+      <p class="mono muted rel__date">
+        <time datetime={latest.date}>{formatReleaseDate(latest.date)}</time>
+      </p>
+      {
+        latest.windows ? (
+          <div class="rel__get">
+            <a class="btn btn--primary rel__btn" href={latest.windows.url} rel="noopener">
+              <Icon name="download" />
+              Download for Windows
+            </a>
+            <p class="mono muted rel__file">
+              {latest.windows.name} · {formatSize(latest.windows.size)}
+              {latest.windows.sha256Url && (
+                <>
+                  {' · '}
+                  <a href={latest.windows.sha256Url} rel="noopener">
+                    SHA-256
+                  </a>
+                </>
+              )}
+            </p>
+          </div>
+        ) : (
+          <div class="rel__get">
+            <a class="btn btn--primary rel__btn" href={latest.url} rel="noopener">
+              <Icon name="download" />
+              Get it on GitHub
+            </a>
+          </div>
+        )
+      }
+      <p class="rel__more">
+        <a href={LINKS.releases} rel="noopener">All releases</a>
+      </p>
+    </div>
+    <ImageFigure
+      src={heroBurnout}
+      alt="A Ferrari F2004 spinning its rear wheels under the start gantry at Spa, in rustyAC"
+      caption="rustyAC drawing the F2004 at Spa with Assetto Corsa's own shaders."
+      sizes="(min-width: 1184px) 620px, (min-width: 900px) 55vw, calc(100vw - 32px)"
+      loading="eager"
+      class="rel__pic"
+    />
+  </section>
+
+  <h2 id="need">What you need</h2>
+  <!-- rustyAC packaging/HOW_TO_RUN.txt, section 1 "What you need" -->
+  <ul>
+    <li><strong>Windows 10 or 11, 64-bit</strong>, with a graphics card that does Direct3D 11.</li>
+    <li>
+      <strong>Your own Assetto Corsa install.</strong> The tracks, the car models, the car data and the sound are read
+      from your own game. rustyAC finds it by itself in Steam's usual place and in every other Steam library. If yours
+      is somewhere else, set <code>AC_ROOT</code> to its folder (the one with <code>content</code> and
+      <code>system</code> in it). Nothing is written into the game's folder.
+    </li>
+    <li>
+      <strong>Nothing to install.</strong> rustyAC is one program in a zip. It can use the Visual C++ 2013 runtime
+      (<code>MSVCR120.dll</code>) for the game's own maths functions; Assetto Corsa installs that, so you most likely
+      have it. Without it rustyAC uses its own copy of those functions, which gives the same results bit for bit.
+    </li>
+  </ul>
+  <pre><code>set AC_ROOT=D:\Games\assettocorsa               (in cmd)
+$env:AC_ROOT = "D:\Games\assettocorsa"          (in PowerShell)</code></pre>
+
+  <h2 id="first-run">First run</h2>
+  <!-- HOW_TO_RUN.txt, section 2 "Commands"; the default car and road: crates/rustyac-game/src/cli.rs -->
+  <ol>
+    <li>Unzip the download anywhere. <code>HOW_TO_RUN.txt</code> in it is the full guide.</li>
+    <li>Open a console (cmd or PowerShell) in that folder.</li>
+    <li>
+      Run <code>rustyac.exe</code>. It starts the Ferrari F2004 on an endless flat road, full screen. To drive on a
+      track in a window instead:
+      <pre><code>rustyac.exe --track spa --windowed</code></pre>
+    </li>
+    <li>
+      Drive with the keyboard or an Xbox pad (the keys are below). A wheel is read through your Assetto Corsa
+      bindings. The window needs the keyboard focus: clicking another window pauses the drive.
+    </li>
+    <li>Press <kbd>Esc</kbd> to quit.</li>
+  </ol>
+  <p>
+    The first run writes <code>rustyac_controls.ini</code> next to <code>rustyac.exe</code> with the bindings it found
+    (your Assetto Corsa bindings if there are any). That file is yours to edit.
+  </p>
+
+  <h2 id="keys">Keys and gamepad</h2>
+  <!-- HOW_TO_RUN.txt, section 3 "Keys" -->
+  <p>
+    Where two keys are listed, the first comes from your Assetto Corsa bindings, so yours may differ; the second is
+    added by rustyAC.
+  </p>
+  <div class="pair">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Keyboard</th><th>Does</th></tr>
+        </thead>
+        <tbody>
+          {
+            KEYS.map(([key, does]) => (
+              <tr>
+                <td class="mono">{key}</td>
+                <td>{does}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Xbox pad</th><th>Does</th></tr>
+        </thead>
+        <tbody>
+          {
+            PAD.map(([key, does]) => (
+              <tr>
+                <td class="mono">{key}</td>
+                <td>{does}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <h2 id="options">Common options</h2>
+  <p>
+    Options go after <code>rustyac.exe</code> on the command line. <code>rustyac.exe --help</code> prints all of
+    them.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Option</th><th>What it does</th></tr>
+      </thead>
+      <tbody>
+        {
+          OPTIONS.map(([flag, does]) => (
+            <tr>
+              <td class="mono opt">{flag}</td>
+              <td>{does}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="limits">Honest limits</h2>
+  <!-- rustyAC README.md; HOW_TO_RUN.txt intro and section 1; docs/port/renderer_leftovers.md ("rustyAC has no menu") -->
+  <ul>
+    <li><strong>It is very experimental.</strong> One car on a track or on an endless flat road.</li>
+    <li><strong>Windows only.</strong> The <a href="/play">browser preview</a> is the only other way to try it.</li>
+    <li><strong>No menus yet.</strong> You start it from the command line, with the options above.</li>
+    <li>
+      <strong>Cars and tracks made only for Custom Shaders Patch are refused</strong>, with a message that says so.
+      <a href="/compatibility">What loads and what does not</a>.
+    </li>
+    <li>
+      <strong>Things break.</strong> When they do, tell us in the <a href={LINKS.discord} rel="noopener">Discord</a
+      >.
+    </li>
+  </ul>
+
+  <h2 id="changelog">Changelog</h2>
+  <p>The last {Math.min(10, all.length)} releases. <a href="/progress#changelog">All of them are on the progress page</a>.</p>
+  <Changelog releases={all.slice(0, 10)} />
+</Page>
+
+<style>
+  .rel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .rel__card {
+    display: grid;
+    align-content: center;
+    justify-items: start;
+    gap: 10px;
+    padding: clamp(22px, 3vw, 32px);
+  }
+
+  .rel__title {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: clamp(1.75rem, 1.3rem + 1.8vw, 2.5rem);
+  }
+
+  .rel__date {
+    font-size: var(--step--1);
+    margin-top: -4px;
+  }
+
+  .rel__get {
+    display: grid;
+    justify-items: start;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .rel__btn {
+    min-height: 52px;
+    padding: 0 24px;
+    font-size: 1.0625rem;
+  }
+
+  .rel__file {
+    font-size: var(--step--1);
+    overflow-wrap: anywhere;
+  }
+
+  .rel__more {
+    font-size: 0.9375rem;
+    color: var(--muted);
+  }
+
+  @media (min-width: 900px) {
+    .rel {
+      grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    }
+  }
+
+  .pair {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    gap: 16px;
+    align-items: start;
+  }
+
+  .opt {
+    white-space: nowrap;
+  }
+
+  @media (max-width: 639.98px) {
+    .opt {
+      white-space: normal;
+      min-width: 9.5rem;
+    }
+  }
+</style>

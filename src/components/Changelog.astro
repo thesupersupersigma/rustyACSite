@@ -1,0 +1,60 @@
+---
+// The releases from GitHub, newest first, each with its notes folded away in a <details>.
+import { formatReleaseDate, formatSize, type Release } from '../lib/release';
+import { titleForVersion } from '../data/roadmap';
+
+interface Props {
+  releases: Release[];
+}
+const { releases } = Astro.props;
+---
+
+<div class="fold-list">
+  {
+    releases.map((release) => {
+      const title = titleForVersion(release.tag);
+      return (
+        <details class="fold">
+          <summary>
+            <span class="mono">{release.tag}</span>
+            {title && <span class="log__title">{title}</span>}
+            <time class="fold__meta" datetime={release.date}>
+              {formatReleaseDate(release.date)}
+            </time>
+          </summary>
+          <div class="fold__body">
+            <Fragment set:html={release.notesHtml} />
+            <p class="log__links">
+              {release.windows && (
+                <a href={release.windows.url} rel="noopener">
+                  Windows zip ({formatSize(release.windows.size)})
+                </a>
+              )}
+              {release.web && (
+                <a href={release.web.url} rel="noopener">
+                  Browser preview zip ({formatSize(release.web.size)})
+                </a>
+              )}
+              <a href={release.url} rel="noopener">
+                Release on GitHub
+              </a>
+            </p>
+          </div>
+        </details>
+      );
+    })
+  }
+</div>
+
+<style>
+  .log__title {
+    font-weight: 500;
+  }
+
+  .log__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 0.9375rem;
+  }
+</style>
