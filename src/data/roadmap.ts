@@ -128,8 +128,6 @@ export const PHASES: Phase[] = [
       // docs/port/several_cars.md
       { id: '24', title: 'Several cars', detail: 'Physics for several cars at once, car-to-car contacts and the pit-lane rule.', status: 'done', version: 'v0.24.0', report: 'several_cars.md' },
       { id: '24b', title: 'Drawing and hearing every car', detail: 'Every car drawn and heard, and switching between them.', status: 'planned' },
-      { id: 'M1', title: 'Multiplayer on the desktop', detail: 'Assetto Corsa’s own network protocol, so rustyAC joins a normal Assetto Corsa server next to players of the real game.', status: 'planned' },
-      { id: 'M2', title: 'Multiplayer in the browser', detail: 'The same network code in the browser preview.', status: 'planned' },
       { id: '25', title: 'AI drivers', detail: 'The game’s computer-controlled drivers.', status: 'planned' },
       { id: '26', title: 'Race rules', detail: 'Race starts, flags, penalties, pit stops and replays in the game’s format.', status: 'planned' },
     ],

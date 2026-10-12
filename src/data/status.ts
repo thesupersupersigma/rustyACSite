@@ -22,5 +22,5 @@ export const STATUS_ROWS: StatusRow[] = [
   { area: 'Sound', status: 'done', detail: "16.7 M FMOD calls identical to AC's" },
   { area: 'Renderer', status: 'mostly', detail: 'Identical D3D11 commands and pixels on 70+ frames' },
   { area: 'Browser preview', status: 'preview', detail: 'The same physics as WebAssembly, bit-exact with the desktop' },
-  { area: 'Still to come', status: 'planned', detail: 'AI, race rules, menus, multiplayer, Enhanced physics' },
+  { area: 'Still to come', status: 'planned', detail: 'AI, race rules, menus, Enhanced physics' },
 ];

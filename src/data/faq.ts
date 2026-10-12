@@ -105,11 +105,11 @@ export const FAQ: FaqGroup[] = [
     title: 'What it can do',
     items: [
       {
-        // brainstorm.md ROADMAP, phase 4 (tasks M1, M2)
+        // multiplayer was taken off the roadmap until it is known to be possible (2026-10-11)
         id: 'multiplayer',
         question: 'Is there multiplayer?',
-        html: `<p>Not yet. It is planned, by porting Assetto Corsa’s own network protocol. ${a('/progress', 'Progress')} shows where it sits.</p>`,
-        text: 'Not yet. It is planned, by porting Assetto Corsa’s own network protocol.',
+        html: '<p>Not yet. Whether and how it can work is still being looked into, so there is no promise yet.</p>',
+        text: 'Not yet. Whether and how it can work is still being looked into, so there is no promise yet.',
       },
       {
         // brainstorm.md ROADMAP, phase 4 (task 25); HOW_TO_RUN.txt, section 2 (--autodrive)
