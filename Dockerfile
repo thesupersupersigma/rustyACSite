@@ -11,6 +11,11 @@ COPY . .
 # GITHUB_TOKEN is optional (a higher rate limit). It is set for this one command only: it is not in
 # the image's environment, and the final image below is a different stage.
 ARG GITHUB_TOKEN=""
+# Docker reuses this stage's cached result while the site's own files are unchanged, so a new rustyAC
+# release would never be picked up by a plain redeploy. Fetching the latest release's record here
+# makes the build run again whenever it changes (it also changes with the download counts, so in
+# practice every deploy fetches the newest preview).
+ADD https://api.github.com/repos/thesupersupersigma/rustyAC/releases/latest /app/node_modules/.cache/latest-release.json
 RUN GITHUB_TOKEN="$GITHUB_TOKEN" npm run build
 
 FROM nginx:1.27-alpine
