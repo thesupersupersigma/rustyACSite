@@ -9,7 +9,8 @@
 //      so one build makes one request
 //   2. downloads the newest rustyAC-vX.Y.Z-web.zip and its .sha256, and compares the hash
 //   3. reads the zip's file list: anything other than what rustyAC's docs/release.md names
-//      (index.html, app.js, style.css, servers.json, pkg/..., LICENSE-GPL, LICENSING.md) stops it
+//      (index.html, app.js, style.css, servers.json, launcher.js, theme_glue.js, sw.js, pkg/...,
+//      LICENSE-GPL, LICENSING.md) stops it
 //   4. unpacks it into public/play/app/ and writes public/play/app/VERSION
 //
 // It never fails the build. When a step goes wrong the copy from the last run stays; with no copy at
@@ -31,7 +32,11 @@ const MAX_ZIP_BYTES = 64 * 1024 * 1024;
 const MAX_UNPACKED_BYTES = 256 * 1024 * 1024;
 
 /** What docs/release.md says the zip holds: "the site only". */
-const ALLOWED_FILES = new Set(['index.html', 'app.js', 'style.css', 'servers.json', 'LICENSE-GPL', 'LICENSING.md']);
+const ALLOWED_FILES = new Set([
+  'index.html', 'app.js', 'style.css', 'servers.json', 'LICENSE-GPL', 'LICENSING.md',
+  // rustyAC v0.37.1+: AC's launcher in the page (sw.js must sit in /play/app/ itself)
+  'launcher.js', 'theme_glue.js', 'sw.js',
+]);
 const ALLOWED_IN_PKG = /^pkg\/[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const isAllowed = (name) => ALLOWED_FILES.has(name) || ALLOWED_IN_PKG.test(name);
 
