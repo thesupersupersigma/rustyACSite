@@ -9,7 +9,7 @@
 //      so one build makes one request
 //   2. downloads the newest rustyAC-vX.Y.Z-web.zip and its .sha256, and compares the hash
 //   3. reads the zip's file list: anything other than what rustyAC's docs/release.md names
-//      (index.html, app.js, style.css, servers.json, launcher.js, theme_glue.js, sw.js, pkg/...,
+//      (index.html, app.js, style.css, servers.json, launcher.js, theme_glue.js, sw.js, pkg/..., fonts/...,
 //      LICENSE-GPL, LICENSING.md) stops it
 //   4. unpacks it into public/play/app/ and writes public/play/app/VERSION
 //
@@ -38,7 +38,10 @@ const ALLOWED_FILES = new Set([
   'launcher.js', 'theme_glue.js', 'sw.js',
 ]);
 const ALLOWED_IN_PKG = /^pkg\/[A-Za-z0-9][A-Za-z0-9._-]*$/;
-const isAllowed = (name) => ALLOWED_FILES.has(name) || ALLOWED_IN_PKG.test(name);
+// rustyAC v0.37.2+: Selawik, the fallback for the launcher theme's Segoe UI (SIL OFL)
+const ALLOWED_IN_FONTS = /^fonts\/[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const ALLOWED_DIRS = new Set(['pkg/', 'fonts/']);
+const isAllowed = (name) => ALLOWED_FILES.has(name) || ALLOWED_IN_PKG.test(name) || ALLOWED_IN_FONTS.test(name);
 
 const log = (message) => console.log(`[play] ${message}`);
 
@@ -179,7 +182,7 @@ async function main() {
   const entries = listZip(zip).filter((entry) => !entry.name.endsWith('/'));
   const unexpected = listZip(zip)
     .map((entry) => entry.name)
-    .filter((name) => (name.endsWith('/') ? name !== 'pkg/' : !isAllowed(name)));
+    .filter((name) => (name.endsWith('/') ? !ALLOWED_DIRS.has(name) : !isAllowed(name)));
   if (unexpected.length > 0) {
     throw new Error(`${picked.zipName} holds files the release notes do not name, not publishing it: ${unexpected.join(', ')}`);
   }
